@@ -14,8 +14,9 @@ html{scroll-behavior:smooth}
 body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-user-select:none;user-select:none}
 input,textarea{-webkit-user-select:text!important;user-select:text!important}
 /* HEADER */
-.hdr{position:sticky;top:0;z-index:100;background:rgba(248,250,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.dark .hdr{background:rgba(10,22,40,.92)}
+.hdr{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(248,250,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dark .hdr{background:rgba(10,22,40,.95)}
+.hdr-left{display:flex;align-items:center;gap:10px}
 .logo{display:flex;align-items:center;gap:9px;text-decoration:none;cursor:pointer}
 .logo-box{width:32px;height:32px;background:linear-gradient(135deg,#2563EB,#1D4ED8);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-family:"Syne",sans-serif;font-weight:800;font-size:17px;box-shadow:0 2px 8px rgba(37,99,235,.3)}
 .logo-text{font-family:"Syne",sans-serif;font-weight:800;font-size:17px;color:var(--text)}
@@ -25,6 +26,36 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 .lang-btn{padding:4px 10px;border-radius:5px;border:none;cursor:pointer;font-size:11px;font-weight:700;font-family:"Inter",sans-serif;background:transparent;color:var(--text2);transition:all .15s}
 .lang-btn.on{background:var(--blue);color:#fff}
 .theme-btn{width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--text)}
+/* HAMBURGER */
+.ham-btn{width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--card);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:8px;transition:all .15s;flex-shrink:0}
+.ham-btn:hover{background:var(--bg2)}
+.ham-line{width:16px;height:2px;background:var(--text);border-radius:2px;transition:all .25s}
+.ham-btn.open .ham-line:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.ham-btn.open .ham-line:nth-child(2){opacity:0;transform:scaleX(0)}
+.ham-btn.open .ham-line:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+/* SIDEBAR */
+.sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(2px)}
+.sb-overlay.show{opacity:1;pointer-events:all}
+.sidebar{position:fixed;top:56px;left:0;bottom:0;width:260px;background:var(--card);border-right:1px solid var(--border);z-index:160;transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);overflow-y:auto;display:flex;flex-direction:column}
+.dark .sidebar{background:#0D1B2E}
+.sidebar.open{transform:translateX(0)}
+.sb-user{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sb-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2563EB,#7C3AED);display:flex;align-items:center;justify-content:center;font-family:Syne,sans-serif;font-weight:800;font-size:14px;color:#fff;flex-shrink:0}
+.sb-name{font-size:13px;font-weight:700;margin-bottom:1px}
+.sb-role{font-size:11px;color:var(--text2)}
+.sb-section{padding:8px 8px 4px;font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.8px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;margin:1px 8px;cursor:pointer;transition:all .15s;color:var(--text2);font-size:13px;font-weight:500;text-decoration:none}
+.sb-item:hover{background:var(--bg2);color:var(--text)}
+.sb-item.active{background:rgba(37,99,235,.1);color:var(--blue);font-weight:700}
+.dark .sb-item.active{background:rgba(59,130,246,.15)}
+.sb-item-ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:var(--bg2)}
+.sb-item.active .sb-item-ico{background:rgba(37,99,235,.15)}
+.sb-badge{margin-left:auto;background:var(--blue);color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:800}
+.sb-badge.red{background:#EF4444}
+.sb-divider{height:1px;background:var(--border);margin:8px 16px}
+.sb-bottom{margin-top:auto;padding:12px 8px;border-top:1px solid var(--border)}
+/* LAYOUT with sidebar offset */
+.main-content{margin-top:56px;transition:margin-left .28s}
 /* PAGES */
 .pg{display:none;min-height:calc(100vh - 56px)}
 .pg.on{display:block}
@@ -200,15 +231,8 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 .video-modal-hdr{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08)}
 .video-modal-title{color:#fff;font-weight:700;font-size:14px}
 .video-modal-close{width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.3);color:#F87171;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
-.video-modal-body{padding:0;aspect-ratio:16/9;background:#000;position:relative}
+.video-modal-body{padding:0;aspect-ratio:16/9;background:#000}
 .video-modal-body iframe{width:100%;height:100%;display:block;border:none}
-.video-modal-body .vid-overlay-tr{position:absolute;top:0;right:0;width:130px;height:52px;z-index:10;cursor:default}
-.video-modal-body .vid-overlay-br{position:absolute;bottom:0;right:0;width:220px;height:46px;z-index:10;cursor:default}
-/* VIDEO WRAP — topic page */
-.vid-wrap{position:relative;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 6px 24px rgba(0,0,0,.35);margin-bottom:16px}
-.vid-wrap iframe{width:100%;height:320px;display:block;border:none}
-.vid-wrap .vid-overlay-tr{position:absolute;top:0;right:0;width:130px;height:52px;z-index:10;cursor:default}
-.vid-wrap .vid-overlay-br{position:absolute;bottom:0;right:0;width:220px;height:46px;z-index:10;cursor:default}
 /* MOBILE MOCK NAV */
 @media(max-width:900px){
   .mock-layout{flex-direction:column}
@@ -358,9 +382,16 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
 <body>
 <!-- HEADER -->
 <div class="hdr">
-  <div class="logo" onclick="goHome()">
-    <div class="logo-box">b</div>
-    <div class="logo-text">BRIGHT <span>education</span></div>
+  <div class="hdr-left">
+    <button class="ham-btn" id="ham-btn" onclick="toggleSidebar()">
+      <div class="ham-line"></div>
+      <div class="ham-line"></div>
+      <div class="ham-line"></div>
+    </button>
+    <div class="logo" onclick="goHome()">
+      <div class="logo-box">b</div>
+      <div class="logo-text">BRIGHT <span>education</span></div>
+    </div>
   </div>
   <div class="hdr-right">
     <div class="lang-sw">
@@ -371,6 +402,61 @@ input,textarea{-webkit-user-select:text!important;user-select:text!important}
     <div id="hdr-auth"></div>
   </div>
 </div>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <div class="sb-user" id="sb-user">
+    <div class="sb-avatar" id="sb-avatar">?</div>
+    <div>
+      <div class="sb-name" id="sb-uname">—</div>
+      <div class="sb-role" id="sb-urole">—</div>
+    </div>
+  </div>
+
+  <div style="flex:1;padding:8px 0">
+    <div class="sb-section" id="sb-s1">Негізгі</div>
+    <div class="sb-item" id="sbi-dashboard" onclick="closeSidebar();renderDashboard()">
+      <div class="sb-item-ico">🏠</div>
+      <span id="sbl-dashboard">Басты бет</span>
+    </div>
+
+    <div class="sb-section" id="sb-s2">Оқу</div>
+    <div class="sb-item" id="sbi-ss" onclick="closeSidebar();renderCourseSelect()">
+      <div class="sb-item-ico">📚</div>
+      <span id="sbl-ss">Self Study</span>
+    </div>
+    <div class="sb-item" id="sbi-mock" onclick="closeSidebar();renderMockSelect()">
+      <div class="sb-item-ico">📝</div>
+      <span id="sbl-mock">Mock Test</span>
+      <span class="sb-badge" id="sb-mock-count" style="display:none">0</span>
+    </div>
+
+    <div class="sb-section" id="sb-s3">Жетістіктер</div>
+    <div class="sb-item" id="sbi-rating" onclick="closeSidebar();renderRating()">
+      <div class="sb-item-ico">🏆</div>
+      <span id="sbl-rating">Рейтинг</span>
+    </div>
+
+    <div class="sb-divider" id="sb-admin-div" style="display:none"></div>
+    <div class="sb-section" id="sb-s4" style="display:none">Басқару</div>
+    <div class="sb-item" id="sbi-admin" style="display:none" onclick="closeSidebar();renderAdmin()">
+      <div class="sb-item-ico">⚙️</div>
+      <span>Admin панель</span>
+    </div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-item" onclick="closeSidebar();doLogout()" style="color:var(--text2)">
+      <div class="sb-item-ico">🚪</div>
+      <span id="sbl-logout">Шығу</span>
+    </div>
+  </div>
+</div>
+
+<div class="main-content" id="main-content">
 
 <!-- MODAL -->
 <div class="modal-bg" id="modal" style="display:none">
@@ -621,7 +707,7 @@ function getVideoSrc(u){
   var vm=u.match(/vimeo\.com\/(\d+)/);
   if(vm)return"https://player.vimeo.com/video/"+vm[1]+"?title=0&byline=0";
   var ym=[/[?&]v=([^&\s#]+)/,/youtu\.be\/([^\?\s#]+)/];
-  for(var i=0;i<ym.length;i++){var m=u.match(ym[i]);if(m)return"https://www.youtube-nocookie.com/embed/"+m[1]+"?rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=0&playsinline=1";}
+  for(var i=0;i<ym.length;i++){var m=u.match(ym[i]);if(m)return"https://www.youtube-nocookie.com/embed/"+m[1]+"?rel=0&modestbranding=1&iv_load_policy=3&disablekb=1";}
   return null;
 }
 function toast(msg,col){
@@ -664,6 +750,7 @@ function setLang(l){
   document.getElementById("btn-kz").classList.toggle("on",l==="kz");
   document.getElementById("btn-ru").classList.toggle("on",l==="ru");
   renderHdrAuth();
+  if(sbOpen)updateSidebar();
   if(curPage==="login")renderLogin();
   else if(curPage==="register")renderRegister();
   else if(curPage==="dashboard")renderDashboard();
@@ -876,6 +963,18 @@ function showPage(id){
   if(el)el.classList.add("on");
   curPage=id;window.scrollTo(0,0);
   renderHdrAuth();
+  // Sidebar active state жаңарту
+  var pageMap={
+    "dashboard":"sbi-dashboard","course-select":"sbi-ss","topic-list":"sbi-ss",
+    "topic":"sbi-ss","mock-select":"sbi-mock","mock":"sbi-mock","mock-result":"sbi-mock",
+    "rating":"sbi-rating","admin":"sbi-admin"
+  };
+  ["sbi-dashboard","sbi-ss","sbi-mock","sbi-rating","sbi-admin"].forEach(function(sid){
+    var sel=document.getElementById(sid);
+    if(sel)sel.classList.remove("active");
+  });
+  var activeId=pageMap[id];
+  if(activeId){var sel=document.getElementById(activeId);if(sel)sel.classList.add("active");}
 }
 function goHome(){if(user)showPage("dashboard");else renderLogin();}
 function renderHdrAuth(){
@@ -897,8 +996,8 @@ function renderHdrAuth(){
     '<button onclick="renderRegister()" style="padding:6px 14px;border-radius:8px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">'+t("register")+'</button>';
   }
 }
-function doLogout(){user=null;localStorage.removeItem("be_user");renderHdrAuth();renderLogin();}
-function setUser(u){user=u;localStorage.setItem("be_user",JSON.stringify(u));renderHdrAuth();}
+function doLogout(){user=null;localStorage.removeItem("be_user");closeSidebar();renderHdrAuth();renderLogin();}
+function setUser(u){user=u;localStorage.setItem("be_user",JSON.stringify(u));renderHdrAuth();updateSidebar();}
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────
 var notifData=[];
@@ -1220,12 +1319,20 @@ async function renderDashboard(){
   var myRefCode=user.ref_code||(user.name.split(" ")[0].toUpperCase().slice(0,6)+(user.id||"").slice(-4).toUpperCase());
   var refLink=window.location.origin+window.location.pathname+"?ref="+myRefCode;
 
+  // Total mock tests available
+  var[mathTests,ctTests]=await Promise.all([db.getMockTests("math"),db.getMockTests("ct")]);
+  var totalMocks=mathTests.length+ctTests.length;
+
+  // Pending challenges
+  var challenges=await db.getMyChallenges(user.id);
+  var pendingChallenges=challenges.received.filter(function(c){return c.status==="pending";});
+
   // Last 5 mock results for chart
   var last5=mock.slice(0,5).reverse();
 
   el.innerHTML='<div class="wrap" style="max-width:800px">'+
 
-  // Greeting
+  // Greeting + streak
   '<div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'+
   '<div>'+
   '<h1 style="font-family:Syne,sans-serif;font-size:22px;font-weight:800;margin-bottom:2px">'+
@@ -1235,14 +1342,48 @@ async function renderDashboard(){
   (lang==="kz"?"NUET-ке "+daysLeft+" күн қалды":"До NUET осталось "+daysLeft+" дней")+
   ' · '+nuetDate.toLocaleDateString(lang==="kz"?"kk-KZ":"ru-RU",{day:"numeric",month:"long",year:"numeric"})+
   '</p></div>'+
-  (streak>0?'<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:12px;padding:10px 16px;text-align:center">'+
+  (streak>0?'<div style="background:linear-gradient(135deg,#F59E0B,#D97706);border-radius:12px;padding:10px 16px;text-align:center;box-shadow:0 4px 12px rgba(245,158,11,.3)">'+
   '<div style="font-size:22px">🔥</div>'+
   '<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff">'+streak+'</div>'+
   '<div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:600">STREAK</div>'+
   '</div>':"")+
   '</div>'+
 
-  // NUET Countdown bar
+  // Pending challenge — dashboard жоғарысында
+  (pendingChallenges.length?
+  pendingChallenges.map(function(ch){
+    var pct=ch.from_total?Math.round(ch.from_score/ch.from_total*100):0;
+    var col=pct>=75?"#16A34A":pct>=50?"#F59E0B":"#EF4444";
+    return'<div style="background:linear-gradient(135deg,#4C1D95,#1E40AF);border-radius:18px;padding:20px;margin-bottom:16px;box-shadow:0 6px 24px rgba(124,58,237,.35);position:relative;overflow:hidden">'+
+    '<div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(255,255,255,.05);border-radius:50%"></div>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'+
+    '<span style="font-size:28px">⚔️</span>'+
+    '<div>'+
+    '<div style="font-family:Syne,sans-serif;font-size:17px;font-weight:800;color:#fff">'+
+    ch.from_user_name+' '+(lang==="kz"?"сені дуэльге шақырды!":"вызывает тебя на дуэль!")+'</div>'+
+    '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px">'+
+    (ch.subject==="math"?"📐 Математика":"🧠 Критикалық ойлау")+'</div>'+
+    '</div></div>'+
+    '<div style="background:rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-bottom:14px;display:flex;align-items:center;gap:14px">'+
+    '<div style="text-align:center;flex:1">'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:4px">'+ch.from_user_name+'</div>'+
+    '<div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:'+col+'">'+pct+'%</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.6)">'+ch.from_score+'/'+ch.from_total+'</div>'+
+    '</div>'+
+    '<div style="font-size:28px;font-weight:900;color:rgba(255,255,255,.4)">VS</div>'+
+    '<div style="text-align:center;flex:1">'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:4px">'+(lang==="kz"?"Сен":"Ты")+'</div>'+
+    '<div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:rgba(255,255,255,.4)">?</div>'+
+    '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+(lang==="kz"?"тапсырмадың":"не сдал")+'</div>'+
+    '</div></div>'+
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="acceptAndStart(\''+ch.id+'\',\''+ch.test_id+'\',\''+ch.subject+'\')" '+
+    'style="flex:1;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(22,163,74,.4)">'+
+    '⚔️ '+(lang==="kz"?"Дуэльді қабылдау!":"Принять вызов!")+'</button>'+
+    '</div></div>';
+  }).join(""):"")+
+
+  // NUET Countdown
   '<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--sh)">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
   '<span style="font-size:13px;font-weight:700">🎯 NUET Countdown</span>'+
@@ -1250,39 +1391,61 @@ async function renderDashboard(){
   '</div>'+
   '<div style="height:8px;background:var(--bg2);border-radius:20px;overflow:hidden">'+
   '<div style="height:100%;background:linear-gradient(90deg,#2563EB,#0EA5E9);border-radius:20px;width:'+Math.max(5,Math.min(100,Math.round((1-(daysLeft/365))*100)))+'%;transition:width .5s"></div>'+
-  '</div>'+
-  '</div>'+
+  '</div></div>'+
 
-  // Stat cards
-  '<div class="stats-grid" style="margin-bottom:14px">'+
-  '<div class="sc" onclick="renderCourseSelect()">'+
-  '<div class="sc-ico">📚</div>'+
-  '<div class="sc-num">'+(md+cd)+'/'+(mathT.length+ctT.length||10)+'</div>'+
-  '<div class="sc-lbl">'+t("selfStudy")+'</div>'+
-  '<div class="sc-action">'+t("continue")+' →</div>'+
-  '</div>'+
-  '<div class="sc" onclick="renderMockSelect()">'+
-  '<div class="sc-ico">📝</div>'+
-  '<div class="sc-num">'+mock.length+'</div>'+
-  '<div class="sc-lbl">'+t("mockTest")+'</div>'+
-  '<div class="sc-action">'+t("go")+' →</div>'+
-  '</div>'+
-  '<div class="sc" onclick="renderRating()">'+
-  '<div class="sc-ico">🏆</div>'+
-  '<div class="sc-num">'+best+'%</div>'+
-  '<div class="sc-lbl">'+(lang==="kz"?"Ең жоғары":"Лучший")+'</div>'+
-  '<div class="sc-action">'+t("rating")+' →</div>'+
-  '</div>'+
-  '<div class="sc">'+
-  '<div class="sc-ico">📈</div>'+
-  '<div class="sc-num">'+avg+'%</div>'+
-  '<div class="sc-lbl">'+(lang==="kz"?"Орташа":"Среднее")+'</div>'+
-  '</div>'+
-  '</div>'+
-
-  // Last 5 chart + SS progress
+  // Self Study + Mock Test — үлкен карточкалар
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
-  // Mini chart
+
+  // Self Study card
+  '<div style="background:linear-gradient(135deg,#1E40AF,#2563EB);border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 6px 20px rgba(37,99,235,.3);transition:transform .15s;position:relative;overflow:hidden" onclick="renderCourseSelect()" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'">'+
+  '<div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.06);border-radius:50%"></div>'+
+  '<div style="font-size:32px;margin-bottom:10px">📚</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:6px">Self Study</div>'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:14px;line-height:1.5">'+
+  (lang==="kz"?"Тақырып бойынша оқып, тест тапсыр. 85%+ — келесі тақырып ашылады.":"Изучай темы, сдавай тесты. 85%+ — следующая тема открывается.")+
+  '</div>'+
+  [{label:"📐 Math",done:md,total:mathT.length||5},{label:"🧠 CT",done:cd,total:ctT.length||5}].map(function(s){
+    var pct=s.total>0?Math.round(s.done/s.total*100):0;
+    return'<div style="margin-bottom:7px">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'+
+    '<span style="font-size:11px;color:rgba(255,255,255,.8);font-weight:600">'+s.label+'</span>'+
+    '<span style="font-size:10px;color:rgba(255,255,255,.6)">'+s.done+'/'+s.total+'</span>'+
+    '</div>'+
+    '<div style="height:5px;background:rgba(255,255,255,.15);border-radius:10px">'+
+    '<div style="height:100%;background:'+(pct>=100?"#4ADE80":"rgba(255,255,255,.7)")+';border-radius:10px;width:'+pct+'%"></div>'+
+    '</div></div>';
+  }).join("")+
+  '<div style="margin-top:14px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.2);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;color:#fff">'+
+  (lang==="kz"?"Жалғастыру →":"Продолжить →")+'</div>'+
+  '</div>'+
+
+  // Mock Test card
+  '<div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 6px 20px rgba(124,58,237,.3);transition:transform .15s;position:relative;overflow:hidden" onclick="renderMockSelect()" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'">'+
+  '<div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.06);border-radius:50%"></div>'+
+  '<div style="font-size:32px;margin-bottom:10px">📝</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:6px">Mock Test</div>'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:14px;line-height:1.5">'+
+  (lang==="kz"?"NUET форматы: 30 сұрақ, 60 минут. Нәтиже, шешімдер және рейтинг.":"Формат NUET: 30 вопросов, 60 минут. Результат, решения и рейтинг.")+
+  '</div>'+
+  '<div style="display:flex;gap:8px;margin-bottom:14px">'+
+  '<div style="flex:1;background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">'+
+  '<div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff">'+mock.length+'</div>'+
+  '<div style="font-size:10px;color:rgba(255,255,255,.6)">'+(lang==="kz"?"Өтті":"Сдано")+'</div>'+
+  '</div>'+
+  '<div style="flex:1;background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">'+
+  '<div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:'+(best>=75?"#4ADE80":best>=50?"#FCD34D":"#FCA5A5")+'">'+best+'%</div>'+
+  '<div style="font-size:10px;color:rgba(255,255,255,.6)">'+(lang==="kz"?"Үздік":"Лучший")+'</div>'+
+  '</div>'+
+  '<div style="flex:1;background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center">'+
+  '<div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff">'+totalMocks+'</div>'+
+  '<div style="font-size:10px;color:rgba(255,255,255,.6)">'+(lang==="kz"?"Бар":"Всего")+'</div>'+
+  '</div></div>'+
+  '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.2);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;color:#fff">'+
+  (lang==="kz"?"Тапсыру →":"Начать →")+'</div>'+
+  '</div></div>'+
+
+  // Chart + Leaderboard
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
   '<div class="card">'+
   '<div class="section-title" style="font-size:14px">📊 '+(lang==="kz"?"Соңғы нәтижелер":"Последние результаты")+'</div>'+
   (last5.length?
@@ -1295,25 +1458,16 @@ async function renderDashboard(){
     '<div style="width:100%;border-radius:4px 4px 0 0;background:'+col+';opacity:.85;height:'+Math.max(8,pct*0.7)+'px"></div>'+
     '<span style="font-size:8px;color:var(--text2)">'+(r.subject==="math"?"M":"CT")+'</span>'+
     '</div>';
-  }).join("")+
-  '</div>':
+  }).join("")+'</div>':
   '<div style="text-align:center;padding:20px 0;color:var(--text2);font-size:12px">'+(lang==="kz"?"Әлі нәтиже жоқ":"Нет результатов")+'</div>')+
   '</div>'+
-  // SS Progress
   '<div class="card">'+
-  '<div class="section-title" style="font-size:14px">📚 '+(lang==="kz"?"SS Прогресс":"SS Прогресс")+'</div>'+
-  [{label:"📐 Math",done:md,total:mathT.length||5},{label:"🧠 CT",done:cd,total:ctT.length||5}].map(function(s){
-    var pct=s.total>0?Math.round(s.done/s.total*100):0;
-    return'<div style="margin-bottom:10px">'+
-    '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
-    '<span style="font-size:12px;font-weight:600">'+s.label+'</span>'+
-    '<span style="font-size:11px;color:var(--text2)">'+s.done+'/'+s.total+'</span>'+
-    '</div>'+
-    '<div class="pb-wrap"><div class="pb-fill" style="width:'+pct+'%;background:'+(pct>=100?"#16A34A":"linear-gradient(90deg,#2563EB,#0EA5E9)")+'"></div></div>'+
-    '</div>';
-  }).join("")+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
+  '<div class="section-title" style="margin-bottom:0;font-size:14px">🏆 Топ 10</div>'+
+  '<button onclick="renderRating()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--blue);font-family:Inter,sans-serif;font-weight:600;font-size:11px;cursor:pointer">'+t("rating")+' →</button>'+
   '</div>'+
-  '</div>'+
+  buildLeaderboard(leaderboard)+
+  '</div></div>'+
 
   // Referral card
   '<div style="background:linear-gradient(135deg,#1E40AF,#7C3AED);border-radius:16px;padding:18px;margin-bottom:14px;box-shadow:0 4px 20px rgba(37,99,235,.25)">'+
@@ -1323,8 +1477,11 @@ async function renderDashboard(){
   '<div style="font-family:Syne,sans-serif;font-size:15px;font-weight:800;color:#fff;margin-bottom:4px">'+
   (lang==="kz"?"3 дос шақыр → 1 ай тегін!":"Пригласи 3 друзей → 1 месяц бесплатно!")+
   '</div>'+
-  '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:12px">'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-bottom:6px">'+
   (lang==="kz"?"Досың Mock Tests сатып алса, саған 1 ай доступ беріледі":"Если друг купит Mock Tests, ты получишь 1 месяц доступа")+
+  '</div>'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-bottom:12px">'+
+  (lang==="kz"?"Досыңның реферал кодын немесе телефонын жаз → challenge жіберіп, SS/Mock ашуға шақыр":"Введи реф. код или телефон друга → отправь челлендж или пригласи")+
   '</div>'+
   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
   '<div style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:7px 12px;font-family:monospace;font-size:13px;font-weight:700;color:#fff;letter-spacing:1px">'+myRefCode+'</div>'+
@@ -1332,49 +1489,18 @@ async function renderDashboard(){
   '<button onclick="shareRefLink(\''+refLink+'\',\''+myRefCode+'\')" style="padding:8px 14px;border-radius:8px;border:none;background:rgba(255,255,255,.25);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:12px;cursor:pointer">📤 '+(lang==="kz"?"Жіберу":"Поделиться")+'</button>'+
   '</div>'+
   '<div style="margin-top:10px;display:flex;gap:6px;align-items:center">'+
-  [1,2,3].map(function(n){
-    var done=refStats.length>=n;
-    return'<div style="width:28px;height:28px;border-radius:50%;background:'+(done?"#16A34A":"rgba(255,255,255,.2)")+';border:2px solid '+(done?"#16A34A":"rgba(255,255,255,.3)")+';display:flex;align-items:center;justify-content:center;font-size:12px">'+(done?"✓":n)+'</div>';
-  }).join('<div style="width:16px;height:2px;background:rgba(255,255,255,.2)"></div>')+
+  [1,2,3].map(function(n){var done=refStats.length>=n;return'<div style="width:28px;height:28px;border-radius:50%;background:'+(done?"#16A34A":"rgba(255,255,255,.2)")+';border:2px solid '+(done?"#16A34A":"rgba(255,255,255,.3)")+';display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff">'+(done?"✓":n)+'</div>';}).join('<div style="width:16px;height:2px;background:rgba(255,255,255,.2)"></div>')+
   '<span style="font-size:11px;color:rgba(255,255,255,.6);margin-left:6px">'+refStats.length+'/3 '+(lang==="kz"?"шақырылды":"приглашено")+'</span>'+
-  '</div>'+
-  '</div></div></div>'+
+  '</div></div></div></div>'+
 
   // Achievements
-  (achievements.length?
-  '<div class="card" style="margin-bottom:14px">'+
-  '<div class="section-title" style="font-size:14px">🏅 '+(lang==="kz"?"Жетістіктер":"Достижения")+'</div>'+
-  '<div style="display:flex;flex-wrap:wrap;gap:8px">'+
-  achievements.map(function(a){
-    return'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600">'+
-    '<span style="font-size:16px">'+a.ico+'</span>'+a.label+'</div>';
-  }).join("")+
-  '</div></div>':"") +
+  (achievements.length?'<div class="card" style="margin-bottom:14px"><div class="section-title" style="font-size:14px">🏅 '+(lang==="kz"?"Жетістіктер":"Достижения")+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+achievements.map(function(a){return'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="font-size:16px">'+a.ico+'</span>'+a.label+'</div>';}).join("")+'</div></div>':"")+
 
-  // Leaderboard top 10
-  '<div class="card" style="margin-bottom:14px">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<div class="section-title" style="margin-bottom:0;font-size:14px">🏆 '+(lang==="kz"?"Соңғы 7 күн · Топ 10":"Последние 7 дней · Топ 10")+'</div>'+
-  '<button onclick="renderRating()" style="padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--blue);font-family:Inter,sans-serif;font-weight:600;font-size:11px;cursor:pointer">'+t("rating")+' →</button>'+
-  '</div>'+
-  buildLeaderboard(leaderboard)+
-  '</div>'+
-
-  // Mock results history
+  // Mock history
   '<div class="card" style="margin-bottom:14px">'+
   '<div class="section-title" style="font-size:14px">📝 '+t("mockResults")+'</div>'+
   buildMockList(mock)+
   '</div>'+
-
-  // Mock → SS promo (if has mock but no SS)
-  (mock.length>0&&(md+cd)<3?
-  '<div style="background:linear-gradient(135deg,rgba(22,163,74,.1),rgba(16,185,129,.05));border:1px solid rgba(22,163,74,.2);border-radius:14px;padding:16px;margin-bottom:14px;display:flex;gap:12px;align-items:center">'+
-  '<span style="font-size:28px">💡</span>'+
-  '<div style="flex:1">'+
-  '<div style="font-weight:700;font-size:14px;margin-bottom:3px">'+(lang==="kz"?"Mock тестіңізді Self Study-мен нығайтыңыз!":"Закрепи Mock-результаты через Self Study!")+'</div>'+
-  '<div style="font-size:12px;color:var(--text2);margin-bottom:10px">'+(lang==="kz"?"Тесттегі қате тақырыптарды SS-та оқып, нәтижеңді арттыр":"Изучи темы, где допускаешь ошибки, и улучши результат")+'</div>'+
-  '<button onclick="renderCourseSelect()" style="padding:8px 16px;border-radius:8px;border:none;background:#16A34A;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:12px;cursor:pointer">📚 Self Study →</button>'+
-  '</div></div>':"") +
 
   '<div style="text-align:center;margin-top:4px">'+
   '<button onclick="doLogout()" style="padding:9px 20px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">'+t("logout")+'</button>'+
@@ -1531,11 +1657,8 @@ function renderTopicPage(){
   var el=document.getElementById("pg-topic");
 
   var videoHtml=vsrc?
-    '<div class="vid-wrap">'+
-    '<iframe src="'+vsrc+'" frameborder="0" allow="autoplay;fullscreen" allowfullscreen></iframe>'+
-    '<div class="vid-overlay-tr"></div>'+
-    '<div class="vid-overlay-br"></div>'+
-    '</div>':
+    '<div style="border-radius:14px;overflow:hidden;background:#000;box-shadow:0 6px 24px rgba(0,0,0,.35);margin-bottom:16px">'+
+    '<iframe src="'+vsrc+'" width="100%" height="320" frameborder="0" allow="autoplay;fullscreen" allowfullscreen style="display:block"></iframe></div>':
     '<div class="card" style="text-align:center;padding:28px;margin-bottom:16px">'+
     '<div style="font-size:36px;margin-bottom:8px">🎬</div><p style="font-size:14px;color:var(--text2)">'+t("noVideo")+'</p></div>';
 
@@ -2122,10 +2245,7 @@ function renderMockResult(){
     '<span class="video-modal-title" id="vm-title">Видео шешім</span>'+
     '<button class="video-modal-close" onclick="closeVideoModal()">✕</button>'+
     '</div>'+
-    '<div class="video-modal-body"><iframe id="vm-iframe" src="" allow="autoplay;fullscreen" allowfullscreen></iframe>'+
-    '<div class="vid-overlay-tr"></div>'+
-    '<div class="vid-overlay-br"></div>'+
-    '</div>'+
+    '<div class="video-modal-body"><iframe id="vm-iframe" src="" allow="autoplay;fullscreen" allowfullscreen></iframe></div>'+
     '</div>';
     document.body.appendChild(vm);
   }
@@ -2662,22 +2782,105 @@ document.addEventListener("keydown",function(e){
   if((e.ctrlKey||e.metaKey)&&["u","s","p"].includes(e.key.toLowerCase()))e.preventDefault();
   if(e.key==="F12")e.preventDefault();
 });
-// iframe жүктелген соң overlay тексеру
-document.addEventListener("blur",function(){
-  // Егер focus iframe-ге өтсе — кері қайтар
-  setTimeout(function(){
-    if(document.activeElement&&document.activeElement.tagName==="IFRAME"){
-      window.focus();
-    }
-  },100);
-},true);
 
-// ── INIT ──────────────────────────────────────────────────────
+// ── SIDEBAR ───────────────────────────────────────────────────
+var sbOpen=false;
+function toggleSidebar(){sbOpen?closeSidebar():openSidebar();}
+function openSidebar(){
+  sbOpen=true;
+  document.getElementById("sidebar").classList.add("open");
+  document.getElementById("sb-overlay").classList.add("show");
+  document.getElementById("ham-btn").classList.add("open");
+  updateSidebar();
+}
+function closeSidebar(){
+  sbOpen=false;
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sb-overlay").classList.remove("show");
+  document.getElementById("ham-btn").classList.remove("open");
+}
+function updateSidebar(){
+  var isKz=lang==="kz";
+  // Labels
+  var labels={
+    "sb-s1":isKz?"Негізгі":"Главная",
+    "sb-s2":isKz?"Оқу":"Учёба",
+    "sb-s3":isKz?"Жетістіктер":"Достижения",
+    "sb-s4":isKz?"Басқару":"Управление",
+    "sbl-dashboard":isKz?"Басты бет":"Главная",
+    "sbl-ss":"Self Study",
+    "sbl-mock":"Mock Test",
+    "sbl-rating":isKz?"Рейтинг":"Рейтинг",
+    "sbl-logout":isKz?"Шығу":"Выйти"
+  };
+  Object.keys(labels).forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.textContent=labels[id];
+  });
+  // User info
+  if(user){
+    var avatar=document.getElementById("sb-avatar");
+    var uname=document.getElementById("sb-uname");
+    var urole=document.getElementById("sb-urole");
+    if(avatar)avatar.textContent=user.name.charAt(0).toUpperCase();
+    if(uname)uname.textContent=user.name;
+    if(urole)urole.textContent=user.role==="admin"?"Admin":"NUET "+(isKz?"оқушысы":"ученик");
+    // Admin items
+    var adminDiv=document.getElementById("sb-admin-div");
+    var adminSec=document.getElementById("sb-s4");
+    var adminItem=document.getElementById("sbi-admin");
+    if(user.role==="admin"){
+      if(adminDiv)adminDiv.style.display="block";
+      if(adminSec)adminSec.style.display="block";
+      if(adminItem)adminItem.style.display="flex";
+    }
+  }
+  // Active item
+  var pageMap={
+    "dashboard":"sbi-dashboard","course-select":"sbi-ss","topic-list":"sbi-ss",
+    "topic":"sbi-ss","mock-select":"sbi-mock","mock":"sbi-mock","mock-result":"sbi-mock",
+    "rating":"sbi-rating","admin":"sbi-admin"
+  };
+  ["sbi-dashboard","sbi-ss","sbi-mock","sbi-rating","sbi-admin"].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.classList.remove("active");
+  });
+  var activeId=pageMap[curPage];
+  if(activeId){
+    var el=document.getElementById(activeId);
+    if(el)el.classList.add("active");
+  }
+  // Mock count badge
+  db.getMockTests("math").then(function(mt){
+    db.getMockTests("ct").then(function(ct){
+      var total=mt.length+ct.length;
+      var badge=document.getElementById("sb-mock-count");
+      if(badge&&total>0){badge.textContent=total;badge.style.display="inline-flex";}
+    });
+  }).catch(function(){});
+  // Notification badge in sidebar
+  if(user){
+    db.getMyNotifications(user.id).then(function(notifs){
+      var mockItem=document.getElementById("sbi-mock");
+      if(notifs&&notifs.length&&mockItem){
+        var existing=mockItem.querySelector(".sb-badge.red");
+        if(!existing){
+          var nb=document.createElement("span");
+          nb.className="sb-badge red";nb.textContent="⚔️ "+notifs.length;
+          mockItem.appendChild(nb);
+        }
+      }
+    }).catch(function(){});
+  }
+}
+// Sidebar-ды showPage кезінде жаңарту
+var _origShowPage=null;
 (function(){
   document.getElementById("btn-kz").classList.toggle("on",lang==="kz");
   document.getElementById("btn-ru").classList.toggle("on",lang==="ru");
   renderHdrAuth();
   if(user){
+    updateSidebar();
     if(user.role==="admin")renderAdmin();
     else renderDashboard();
   } else {
@@ -2685,5 +2888,6 @@ document.addEventListener("blur",function(){
   }
 })();
 </script>
+</div><!-- /main-content -->
 </body>
 </html>
