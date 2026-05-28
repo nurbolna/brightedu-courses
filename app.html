@@ -805,7 +805,6 @@ var db={
       var r=await sb.from("test_results").select("user_name,user_id,score,total,subject,created_at")
         .eq("type","mock").gte("created_at",week).order("created_at",{ascending:false});
       if(!r.data||!r.data.length)return[];
-      // Әр оқушының ең үздік нәтижесі
       var best={};
       r.data.forEach(function(row){
         var pct=Math.round(row.score/row.total*100);
@@ -813,9 +812,19 @@ var db={
           best[row.user_id]={name:row.user_name,pct:pct,score:row.score,total:row.total,subject:row.subject,id:row.user_id};
         }
       });
-      return Object.values(best).sort(function(a,b){return b.pct-a.pct;}).slice(0,10);
+      return Object.values(best).sort(function(a,b){return b.pct-a.pct;}).slice(0,5);
     }
     catch(e){return[];}
+  },
+  async getWeeklyTime(uid){
+    // Апталық уақыт: тест time_taken секундтарынан есептейміз
+    try{
+      var week=new Date(Date.now()-7*24*60*60*1000).toISOString();
+      var r=await sb.from("test_results").select("time_taken,created_at").eq("user_id",uid).gte("created_at",week);
+      if(!r.data||!r.data.length)return 0;
+      var total=r.data.reduce(function(s,x){return s+(x.time_taken||0);},0);
+      return total; // секундта
+    }catch(e){return 0;}
   },
   async getStreak(uid){
     try{
@@ -1284,10 +1293,11 @@ async function renderDashboard(){
   el.innerHTML='<div class="loading"><span class="spin" style="font-size:26px">⏳</span></div>';
   showPage("dashboard");
 
-  var[prog,mathT,ctT,myRes,leaderboard,streak,refStats]=await Promise.all([
+  var[prog,mathT,ctT,myRes,leaderboard,streak,refStats,weeklyTime]=await Promise.all([
     db.getProgress(user.id),db.getTopics("math"),db.getTopics("ct"),
     db.getMyResults(user.id),db.getLeaderboard(),
-    db.getStreak(user.id),db.getReferralStats(user.id)
+    db.getStreak(user.id),db.getReferralStats(user.id),
+    db.getWeeklyTime(user.id)
   ]);
 
   var pm={};prog.forEach(function(p){pm[p.subject+"_"+p.topic_id]=p;});
@@ -1329,6 +1339,11 @@ async function renderDashboard(){
 
   // Last 5 mock results for chart
   var last5=mock.slice(0,5).reverse();
+
+  // Weekly time format
+  var weekHours=Math.floor((weeklyTime||0)/3600);
+  var weekMins=Math.floor(((weeklyTime||0)%3600)/60);
+  var weekStr=weekHours>0?(weekHours+(lang==="kz"?" сағ ":" ч ")+weekMins+(lang==="kz"?" мин":" мин")):(weekMins+(lang==="kz"?" минут":" минут"));
 
   el.innerHTML='<div class="wrap" style="max-width:800px">'+
 
@@ -1444,26 +1459,46 @@ async function renderDashboard(){
   (lang==="kz"?"Тапсыру →":"Начать →")+'</div>'+
   '</div></div>'+
 
-  // Chart + Leaderboard
+  // Chart + Achievements + Weekly time // Leaderboard Top 5
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
+
+  // Сол жақ: Weekly time + Chart + Achievements
   '<div class="card">'+
-  '<div class="section-title" style="font-size:14px">📊 '+(lang==="kz"?"Соңғы нәтижелер":"Последние результаты")+'</div>'+
+  '<div style="background:linear-gradient(135deg,rgba(37,99,235,.08),rgba(124,58,237,.06));border:1px solid rgba(37,99,235,.12);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">'+
+  '<span style="font-size:20px">⏱</span>'+
+  '<div style="flex:1">'+
+  '<div style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.3px">'+(lang==="kz"?"Осы аптада":"На этой неделе")+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:15px;font-weight:800;color:var(--blue)">'+
+  (weeklyTime>0?weekStr:(lang==="kz"?"Әлі жоқ":"Пока нет"))+
+  '</div>'+
+  '</div>'+
+  (weeklyTime>=3600?'<span style="font-size:18px">🔥</span>':weeklyTime>0?'<span style="font-size:18px">💪</span>':'')+
+  '</div>'+
+  '<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📊 '+(lang==="kz"?"Соңғы нәтижелер":"Последние результаты")+'</div>'+
   (last5.length?
-  '<div style="display:flex;align-items:flex-end;gap:6px;height:80px;padding-top:8px">'+
+  '<div style="display:flex;align-items:flex-end;gap:5px;height:65px;margin-bottom:12px">'+
   last5.map(function(r){
     var pct=Math.round(r.score/r.total*100);
     var col=pct>=75?"#16A34A":pct>=50?"#F59E0B":"#EF4444";
-    return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">'+
+    return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
     '<span style="font-size:9px;font-weight:700;color:'+col+'">'+pct+'%</span>'+
-    '<div style="width:100%;border-radius:4px 4px 0 0;background:'+col+';opacity:.85;height:'+Math.max(8,pct*0.7)+'px"></div>'+
+    '<div style="width:100%;border-radius:4px 4px 0 0;background:'+col+';opacity:.85;height:'+Math.max(5,pct*0.55)+'px"></div>'+
     '<span style="font-size:8px;color:var(--text2)">'+(r.subject==="math"?"M":"CT")+'</span>'+
     '</div>';
   }).join("")+'</div>':
-  '<div style="text-align:center;padding:20px 0;color:var(--text2);font-size:12px">'+(lang==="kz"?"Әлі нәтиже жоқ":"Нет результатов")+'</div>')+
+  '<div style="text-align:center;padding:12px 0;color:var(--text2);font-size:11px;margin-bottom:12px">'+(lang==="kz"?"Тест тапсыр, нәтиже осында":"Сдай тест, появится график")+'</div>')+
+  (achievements.length?
+  '<div style="border-top:1px solid var(--border);padding-top:10px">'+
+  '<div style="font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">🏅 '+(lang==="kz"?"Жетістіктер":"Достижения")+'</div>'+
+  '<div style="display:flex;flex-wrap:wrap;gap:4px">'+
+  achievements.map(function(a){return'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:4px 7px;display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600"><span>'+a.ico+'</span><span>'+a.label+'</span></div>';}).join("")+
+  '</div></div>':'')+
   '</div>'+
+
+  // Оң жақ: Leaderboard Top 5
   '<div class="card">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
-  '<div class="section-title" style="margin-bottom:0;font-size:14px">🏆 Топ 10</div>'+
+  '<div class="section-title" style="margin-bottom:0;font-size:14px">🏆 Топ 5</div>'+
   '<button onclick="renderRating()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--blue);font-family:Inter,sans-serif;font-weight:600;font-size:11px;cursor:pointer">'+t("rating")+' →</button>'+
   '</div>'+
   buildLeaderboard(leaderboard)+
@@ -1492,15 +1527,6 @@ async function renderDashboard(){
   [1,2,3].map(function(n){var done=refStats.length>=n;return'<div style="width:28px;height:28px;border-radius:50%;background:'+(done?"#16A34A":"rgba(255,255,255,.2)")+';border:2px solid '+(done?"#16A34A":"rgba(255,255,255,.3)")+';display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff">'+(done?"✓":n)+'</div>';}).join('<div style="width:16px;height:2px;background:rgba(255,255,255,.2)"></div>')+
   '<span style="font-size:11px;color:rgba(255,255,255,.6);margin-left:6px">'+refStats.length+'/3 '+(lang==="kz"?"шақырылды":"приглашено")+'</span>'+
   '</div></div></div></div>'+
-
-  // Achievements
-  (achievements.length?'<div class="card" style="margin-bottom:14px"><div class="section-title" style="font-size:14px">🏅 '+(lang==="kz"?"Жетістіктер":"Достижения")+'</div><div style="display:flex;flex-wrap:wrap;gap:8px">'+achievements.map(function(a){return'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600"><span style="font-size:16px">'+a.ico+'</span>'+a.label+'</div>';}).join("")+'</div></div>':"")+
-
-  // Mock history
-  '<div class="card" style="margin-bottom:14px">'+
-  '<div class="section-title" style="font-size:14px">📝 '+t("mockResults")+'</div>'+
-  buildMockList(mock)+
-  '</div>'+
 
   '<div style="text-align:center;margin-top:4px">'+
   '<button onclick="doLogout()" style="padding:9px 20px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">'+t("logout")+'</button>'+
@@ -2093,7 +2119,7 @@ async function finalizeMock(){
       setTimeout(function(){renderChallengeResult(ch,score,qState.qs.length);},300);
     }catch(e){ctx.activeChallenge=null;}
   } else {
-    setTimeout(function(){renderChallengeSend(score,qState.qs.length,qState.testId,qState.subject);},300);
+    // Challenge inline нәтиже бетінде — қосымша шақыру керек емес
   }
   if(user)db.saveResult(user.id,user.name,qState.subject,"mock",score,qState.qs.length,qState.mode,qState.mode==="timer"?60*60-qState.time:0).catch(function(){});
 }
@@ -2222,6 +2248,30 @@ function renderMockResult(){
   '<button class="rbtn rbtn-ol" onclick="renderDashboard()">🏠 '+t("backHome")+'</button>'+
   '</div></div>'+
 
+  // ⚔️ Challenge жіберу блогы — нәтиже мен тексеру АРАСЫНДА
+  '<div style="background:linear-gradient(135deg,#4C1D95,#1E40AF);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 4px 20px rgba(124,58,237,.25)">'+
+  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
+  '<span style="font-size:24px">⚔️</span>'+
+  '<div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#fff">'+
+  (lang==="kz"?"Досыңа challenge жібер!":"Брось вызов другу!")+'</div>'+
+  '<div style="font-size:12px;color:rgba(255,255,255,.7)">'+
+  (lang==="kz"?"Нәтижеңді жіберіп, одан асып түсуін сұра":"Отправь результат и посмотри, сможет ли он побить")+'</div>'+
+  '</div></div>'+
+  '<div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'+
+  '<span style="font-size:12px;color:rgba(255,255,255,.8)">'+(r.subject==="math"?"📐 Math":"🧠 CT")+' · '+r.mode+'</span>'+
+  '<span style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:'+gc+'">'+pct+'%</span>'+
+  '</div>'+
+  '<div style="display:flex;gap:8px">'+
+  '<input id="challenge-search-inline" type="text" placeholder="'+(lang==="kz"?"Реферал код немесе телефон (+7...)":"Реф. код или телефон (+7...)")+'" '+
+  'style="flex:1;padding:10px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-family:Inter,sans-serif;font-size:13px;outline:none" />'+
+  '<button onclick="sendChallengeInline(\''+r.testId+'\',\''+r.subject+'\','+r.score+','+r.total+')" '+
+  'style="padding:10px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">'+
+  '⚔️ '+(lang==="kz"?"Жіберу":"Отправить")+'</button>'+
+  '</div>'+
+  '<div id="challenge-inline-msg" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.8);min-height:16px"></div>'+
+  '</div>'+
+
   // Review section
   '<div class="review-section" id="review-section">'+
   '<div class="review-hdr">'+
@@ -2250,15 +2300,34 @@ function renderMockResult(){
     document.body.appendChild(vm);
   }
 
-  window.switchReview=function(filter){
-    ["all","wrong","correct"].forEach(function(f){
-      var btn=document.getElementById("rf-"+f);
-      if(btn)btn.className="rf-btn"+(f===filter?" on":"");
-    });
-    var list=document.getElementById("review-list");
-    if(list)list.innerHTML=buildReview(filter);
-  };
 }
+
+  window.sendChallengeInline=async function(testId,subject,score,total){
+  var inp=document.getElementById("challenge-search-inline");
+  var msg=document.getElementById("challenge-inline-msg");
+  if(!inp||!msg)return;
+  var val=inp.value.trim();
+  if(!val){msg.textContent="⚠️ "+(lang==="kz"?"Код немесе телефон жазыңыз":"Введите код или телефон");return;}
+  msg.textContent=(lang==="kz"?"Іздеуде...":"Поиск...");
+  var found=await db.findUserByRefOrPhone(val);
+  if(!found){msg.textContent="❌ "+(lang==="kz"?"Оқушы табылмады":"Пользователь не найден");return;}
+  if(found.id===user.id){msg.textContent="⚠️ "+(lang==="kz"?"Өзіңе challenge жіберу мүмкін емес":"Нельзя вызвать самого себя");return;}
+  msg.textContent=(lang==="kz"?"Жіберілуде...":"Отправка...");
+  try{
+    await db.sendChallenge(user,found.id,found.name,testId,subject,score,total);
+    msg.textContent="✅ "+found.name+(lang==="kz"?"-ға challenge жіберілді! ⚔️":" получил вызов! ⚔️");
+    inp.value="";
+  }catch(e){msg.textContent="❌ "+(e.message||"Қате");}
+};
+
+window.switchReview=function(filter){
+  ["all","wrong","correct"].forEach(function(f){
+    var btn=document.getElementById("rf-"+f);
+    if(btn)btn.className="rf-btn"+(f===filter?" on":"");
+  });
+  var list=document.getElementById("review-list");
+  if(list)list.innerHTML=buildReview(filter);
+};
 
 window.openVideoModal=function(src,qNum){
   var vm=document.getElementById("video-modal");
