@@ -665,7 +665,90 @@ function getDemoQuestions(subj){
   }
 }
 
-// ── HELPERS ───────────────────────────────────────────────────
+// ── MOTIVATIONAL QUOTES ───────────────────────────────────────
+var QUOTES=[
+  {w:1,text:"We must all suffer one of two things: the pain of discipline or the pain of regret.",author:"Jim Rohn"},
+  {w:1,text:"Discipline is choosing between what you want now and what you want most.",author:"Abraham Lincoln"},
+  {w:2,text:"Suffering is the test. If you can get through suffering, you will see the light on the other side.",author:"David Goggins"},
+  {w:2,text:"With self-discipline, most anything is possible.",author:"Theodore Roosevelt"},
+  {w:3,text:"It's not the will to win that matters. It's the will to prepare to win that matters.",author:"Paul Bryant"},
+  {w:3,text:"Discipline is the bridge between goals and accomplishment.",author:"Jim Rohn"},
+  {w:4,text:"Don't quit. Suffer now and live the rest of your life as a champion.",author:"Muhammad Ali"},
+  {w:4,text:"Consistent hard work leads to success. Greatness will come.",author:"Dwayne Johnson"},
+  {w:5,text:"If you don't discipline yourself, the world will do it for you.",author:"William Feather"},
+  {w:5,text:"You cannot escape the responsibility of tomorrow by evading it today.",author:"Abraham Lincoln"},
+  {w:6,text:"We are what we repeatedly do. Excellence, then, is not an act, but a habit.",author:"Aristotle"},
+  {w:6,text:"If you wait until you feel like doing something, you will never get started.",author:"Mel Robbins"},
+  {w:7,text:"I will survive because the fire inside me burns brighter than the fire around me.",author:"Keanu Reeves"},
+  {w:7,text:"You don't have to be great to start, but you have to start to be great.",author:"Zig Ziglar"},
+  {w:8,text:"The successful warrior is the average man, with laser-like focus.",author:"Bruce Lee"},
+  {w:8,text:"The only place where success comes before work is in the dictionary.",author:"Vidal Sassoon"},
+  {w:9,text:"It's not that I'm so smart, it's just that I stay with problems longer.",author:"Albert Einstein"},
+  {w:9,text:"I've failed over and over again in my life. And that is why I succeed.",author:"Michael Jordan"},
+  {w:10,text:"Small daily improvements over time lead to stunning results.",author:"Robin Sharma"},
+  {w:10,text:"The secret of your future is hidden in your daily routine.",author:"Mike Murdock"},
+  {w:11,text:"Dreams don't work unless you do.",author:"John C. Maxwell"},
+  {w:11,text:"Do what you have to do until you can do what you want to do.",author:"Oprah Winfrey"},
+  {w:12,text:"Amateurs wait for inspiration. The rest of us just get up and go to work.",author:"Stephen King"},
+  {w:12,text:"The successful man will profit from his mistakes and try again in a different way.",author:"Dale Carnegie"},
+  {w:13,text:"Hard work beats talent when talent fails to work hard.",author:"Kevin Durant"},
+  {w:13,text:"Confidence comes from hours and days and years of constant work and dedication.",author:"Roger Federer"},
+  {w:14,text:"The only limit to our realization of tomorrow will be our doubts of today.",author:"Franklin D. Roosevelt"},
+  {w:14,text:"It always seems impossible until it's done.",author:"Nelson Mandela"},
+  {w:15,text:"Continuous effort, not strength or intelligence, is the key to unlocking our potential.",author:"Winston Churchill"},
+  {w:15,text:"What lies within us is greater than what lies behind or before us.",author:"Ralph Waldo Emerson"},
+  {w:16,text:"Energy and persistence conquer all things.",author:"Benjamin Franklin"},
+  {w:16,text:"Your focus determines your reality.",author:"George Lucas"},
+  {w:17,text:"The harder I work, the more luck I seem to have.",author:"Thomas Jefferson"},
+  {w:17,text:"Don't count the days, make the days count.",author:"Muhammad Ali"},
+  {w:18,text:"The best way to predict your future is to create it.",author:"Peter Drucker"},
+  {w:18,text:"Great things are done by a series of small things brought together.",author:"Vincent Van Gogh"},
+  {w:19,text:"Focus is a matter of deciding what things you're not going to do.",author:"John Carmack"},
+  {w:19,text:"If you want to live a happy life, tie it to a goal, not to people or things.",author:"Albert Einstein"},
+  {w:20,text:"There are no shortcuts to any place worth going.",author:"Beverly Sills"},
+  {w:20,text:"You must do the things you think you cannot do.",author:"Eleanor Roosevelt"},
+  {w:21,text:"You miss 100% of the shots you don't take.",author:"Wayne Gretzky"},
+  {w:21,text:"Action is the foundational key to all success.",author:"Pablo Picasso"},
+  {w:22,text:"Believe you can and you're halfway there.",author:"Theodore Roosevelt"},
+  {w:22,text:"The pain you feel today will be the strength you feel tomorrow.",author:"Arnold Schwarzenegger"},
+  {w:23,text:"Do not pray for an easy life, pray for the strength to endure a difficult one.",author:"Bruce Lee"},
+  {w:23,text:"The only bad workout is the one that didn't happen.",author:"Unknown"},
+  {w:24,text:"Perseverance is the hard work you do after you get tired of doing the hard work you already did.",author:"Newt Gingrich"},
+  {w:24,text:"It is during our darkest moments that we must focus to see the light.",author:"Aristotle"},
+  {w:25,text:"Never give up on a dream just because of the time it will take to accomplish it.",author:"Earl Nightingale"},
+  {w:25,text:"If you're going through hell, keep going.",author:"Winston Churchill"},
+  {w:26,text:"The difference between winning and losing is most often not quitting.",author:"Walt Disney"},
+  {w:26,text:"The price of greatness is responsibility.",author:"Winston Churchill"},
+  {w:27,text:"The best revenge is massive success.",author:"Frank Sinatra"},
+  {w:27,text:"An investment in knowledge pays the best interest.",author:"Benjamin Franklin"},
+  {w:28,text:"I don't stop when I'm tired. I stop when I'm done.",author:"David Goggins"},
+  {w:28,text:"Opportunities don't happen, you create them.",author:"Chris Grosser"},
+  {w:29,text:"Be miserable. Or motivate yourself. Whatever has to be done, it's always your choice.",author:"Wayne Dyer"},
+  {w:29,text:"If you always do what you've always done, you'll always get what you've always got.",author:"Henry Ford"},
+  {w:30,text:"There is no traffic jam along the extra mile.",author:"Roger Staubach"},
+  {w:30,text:"The harder the conflict, the more glorious the triumph.",author:"Thomas Paine"},
+  {w:31,text:"You are never too old to set another goal or to dream a new dream.",author:"C.S. Lewis"},
+  {w:31,text:"You have to expect things of yourself before you can do them.",author:"Michael Jordan"},
+  {w:32,text:"Your time is limited, so don't waste it living someone else's life.",author:"Steve Jobs"},
+  {w:32,text:"In the middle of difficulty lies opportunity.",author:"Albert Einstein"},
+  {w:33,text:"Motivation is what gets you started. Habit is what keeps you going.",author:"Jim Ryun"},
+  {w:33,text:"Gold medals are made of sweat, determination, and guts.",author:"Dan Gable"},
+  {w:34,text:"Losers quit when they fail. Winners fail until they succeed.",author:"Robert Kiyosaki"},
+  {w:34,text:"Today I will do what others won't, so tomorrow I can do what others can't.",author:"Jerry Rice"},
+  {w:35,text:"The secret to getting ahead is getting started.",author:"Mark Twain"},
+  {w:35,text:"Dreams don't work unless you do. Every day. No exceptions.",author:"John C. Maxwell"}
+];
+
+function getCurrentQuote(){
+  // Күн санын NUET басталған күннен санаймыз (2026 жылдың 1 қыркүйегі)
+  var start=new Date(2026,8,1);
+  var now=new Date();
+  var daysSince=Math.floor((now-start)/(1000*60*60*24));
+  if(daysSince<0)daysSince=0;
+  // Әр 3.5 күнде бір цитата ауысады
+  var idx=Math.floor(daysSince/3.5)%QUOTES.length;
+  return QUOTES[idx];
+}
 function fmtPhone(r){
   var d=r.replace(/\D/g,""),s=d.startsWith("8")?"7"+d.slice(1):d.startsWith("7")?d:"7"+d;
   var b=s.slice(1),res="+7";
@@ -1407,6 +1490,62 @@ async function renderDashboard(){
   '<div style="height:8px;background:var(--bg2);border-radius:20px;overflow:hidden">'+
   '<div style="height:100%;background:linear-gradient(90deg,#2563EB,#0EA5E9);border-radius:20px;width:'+Math.max(5,Math.min(100,Math.round((1-(daysLeft/365))*100)))+'%;transition:width .5s"></div>'+
   '</div></div>'+
+
+  // ── MOTIVATIONAL QUOTE ────────────────────────────────────────
+  (function(){
+    var q=getCurrentQuote();
+    var weekNum=q.w;
+    var totalWeeks=35;
+    var progress=Math.round((weekNum/totalWeeks)*100);
+    return'<div style="position:relative;border-radius:20px;overflow:hidden;margin-bottom:14px;cursor:default">'+
+    // Background gradient
+    '<div style="position:absolute;inset:0;background:linear-gradient(135deg,#0F172A 0%,#1E1B4B 40%,#1E3A5F 100%)"></div>'+
+    // Decorative circles
+    '<div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(99,102,241,.25),transparent 70%);border-radius:50%"></div>'+
+    '<div style="position:absolute;bottom:-30px;left:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(37,99,235,.2),transparent 70%);border-radius:50%"></div>'+
+    '<div style="position:absolute;top:50%;right:60px;width:60px;height:60px;background:radial-gradient(circle,rgba(245,158,11,.15),transparent 70%);border-radius:50%"></div>'+
+    // Content
+    '<div style="position:relative;padding:24px 28px">'+
+    // Top bar
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+    '<div style="width:28px;height:28px;border-radius:8px;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;font-size:14px">💫</div>'+
+    '<div>'+
+    '<div style="font-size:9px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1.5px">'+(lang==="kz"?"Апталық мотивация":"Мотивация недели")+'</div>'+
+    '<div style="font-size:10px;font-weight:600;color:rgba(255,255,255,.5)">Week '+weekNum+' of '+totalWeeks+'</div>'+
+    '</div></div>'+
+    // Week progress dots
+    '<div style="display:flex;gap:3px;align-items:center">'+
+    [1,2,3,4,5].map(function(_,i){
+      var filled=Math.floor(weekNum/7)>=i;
+      return'<div style="width:'+(filled?8:5)+'px;height:'+(filled?8:5)+'px;border-radius:50%;background:'+(filled?'rgba(245,158,11,.8)':'rgba(255,255,255,.2)')+';transition:all .3s"></div>';
+    }).join("")+
+    '</div>'+
+    '</div>'+
+    // Quote text
+    '<div style="position:relative;margin-bottom:16px">'+
+    '<div style="position:absolute;top:-8px;left:-4px;font-size:48px;color:rgba(99,102,241,.3);font-family:Georgia,serif;line-height:1">"</div>'+
+    '<div style="font-size:17px;line-height:1.65;font-weight:600;color:#fff;padding-left:16px;padding-right:16px;font-style:italic;letter-spacing:.01em">'+
+    q.text+
+    '</div>'+
+    '<div style="position:absolute;bottom:-16px;right:0;font-size:48px;color:rgba(99,102,241,.3);font-family:Georgia,serif;line-height:1">"</div>'+
+    '</div>'+
+    // Author
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px">'+
+    '<div style="display:flex;align-items:center;gap:8px">'+
+    '<div style="width:1px;height:16px;background:rgba(245,158,11,.6)"></div>'+
+    '<span style="font-size:12px;font-weight:700;color:rgba(245,158,11,.9);letter-spacing:.3px">— '+q.author+'</span>'+
+    '</div>'+
+    // Progress bar
+    '<div style="display:flex;align-items:center;gap:6px">'+
+    '<div style="width:60px;height:3px;background:rgba(255,255,255,.1);border-radius:10px;overflow:hidden">'+
+    '<div style="height:100%;width:'+progress+'%;background:linear-gradient(90deg,#6366F1,#F59E0B);border-radius:10px"></div>'+
+    '</div>'+
+    '<span style="font-size:9px;color:rgba(255,255,255,.3);font-weight:600">'+progress+'%</span>'+
+    '</div>'+
+    '</div>'+
+    '</div></div>';
+  })()+
 
   // Self Study + Mock Test — үлкен карточкалар
   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'+
