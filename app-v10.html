@@ -3225,10 +3225,9 @@ window.adminCreateTopic=async function(){
   var ru=document.getElementById("new-tp-ru").value.trim();
   var msg=document.getElementById("admin-tp-msg");
   if(!kz&&!ru){msg.textContent="⚠️ Атауды енгізіңіз";msg.style.color="#EF4444";msg.style.display="block";return;}
-  var id=(subj==="math"?"math":"ct")+"-"+Date.now();
   msg.textContent="Жасалуда...";msg.style.color="var(--text2)";msg.style.display="block";
   try{
-    await db.saveTopic({id:id,subject:subj,order_num:order,name_kz:kz||ru,name_ru:ru||kz,video_url:"",homework_url:"",homework_solution_url:""});
+    await db.saveTopic({subject:subj,order_num:order,name_kz:kz||ru,name_ru:ru||kz,video_url:"",homework_url:"",homework_solution_url:""});
     msg.textContent="✅ Тақырып жасалды!";msg.style.color="#16A34A";
     setTimeout(renderAdminSSTopics,600);
   }catch(e){msg.textContent="❌ "+e.message;msg.style.color="#EF4444";}
@@ -3418,7 +3417,20 @@ function buildSSQForm(wrapId,listId,type,qData){
   // Explanation (HW only)
   (isHw?
   '<div class="adm-field"><label class="adm-label">Түсіндірме — міндетті емес</label>'+
-  '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>':"")+ 
+  '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>'+
+  '<div class="adm-field"><label class="adm-label">Түсіндірмеге сурет — міндетті емес</label>'+
+  '<div class="img-upload-area" id="ss-expl-img-area">'+
+  '<input type="file" accept="image/*" id="sqf-expl-image" onchange="previewExplImage(event)"/>'+
+  '<div id="ss-expl-img-placeholder"'+(qData&&qData.explanation_image_url?' style="display:none"':'')+'>'+
+  '<div style="font-size:24px;margin-bottom:4px">🖼</div>'+
+  '<div style="font-size:12px;color:var(--text2)">Түсіндірмеге сурет жүктеу</div>'+
+  '</div>'+
+  '<img id="ss-expl-img-preview" class="img-preview" style="display:'+(qData&&qData.explanation_image_url?"block":"none")+'" src="'+(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'"/>'+
+  '</div>'+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-expl-img-url" value="'+escHtml(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'" placeholder="немесе URL қойыңыз" style="flex:1" oninput="syncExplImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearExplImage()" style="padding:8px 12px;font-size:12px">🗑</button>'+
+  '</div></div>':"")+ 
   // Order
   '<div class="adm-field"><label class="adm-label">Реті</label>'+
   '<input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
@@ -3502,6 +3514,37 @@ window.clearSSImage=function(){
   if(urlInput)urlInput.value="";
   if(fileInput)fileInput.value="";
 };
+window.previewExplImage=function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=document.getElementById("ss-expl-img-preview");
+    var ph=document.getElementById("ss-expl-img-placeholder");
+    if(img){img.src=ev.target.result;img.style.display="block";}
+    if(ph)ph.style.display="none";
+    adminCtx.explImgUrl="__file__";
+  };
+  reader.readAsDataURL(file);
+};
+window.syncExplImgUrl=function(val){
+  adminCtx.explImgUrl=val;
+  var img=document.getElementById("ss-expl-img-preview");
+  var ph=document.getElementById("ss-expl-img-placeholder");
+  if(val){if(img){img.src=val;img.style.display="block";}if(ph)ph.style.display="none";}
+  else{if(img){img.src="";img.style.display="none";}if(ph)ph.style.display="block";}
+};
+window.clearExplImage=function(){
+  var img=document.getElementById("ss-expl-img-preview");
+  var ph=document.getElementById("ss-expl-img-placeholder");
+  var url=document.getElementById("sqf-expl-img-url");
+  var fi=document.getElementById("sqf-expl-image");
+  adminCtx.explImgUrl="";
+  if(img){img.src="";img.style.display="none";}
+  if(ph)ph.style.display="block";
+  if(url)url.value="";
+  if(fi)fi.value="";
+};
+
 
 window.adminOpenHwForm=function(qId){
   if(!qId){buildSSQForm("admin-hw-form-wrap","admin-hw-list","hw",null);return;}
@@ -3530,6 +3573,17 @@ window.saveSSQ=async function(wrapId,listId,type){
   if(filled.length<2){msg.textContent="⚠️ Кем дегенде 2 нұсқа керек";msg.style.color="#EF4444";msg.style.display="block";return;}
   var order=parseInt((document.getElementById("sqf-order")||{}).value)||1;
   var expl=(document.getElementById("sqf-expl")||{}).value||"";
+  var explImgUrl=(document.getElementById("sqf-expl-img-url")||{}).value||"";
+  // Upload expl image if file selected
+  var explFileInput=document.getElementById("sqf-expl-image");
+  if(explFileInput&&explFileInput.files&&explFileInput.files[0]){
+    msg.textContent="🖼 Түсіндірме суреті жүктелуде...";msg.style.color="var(--text2)";msg.style.display="block";
+    try{
+      explImgUrl=await db.uploadImage(explFileInput.files[0],"ss/expl/"+adminCtx.editTopicId+"/"+Date.now());
+    }catch(e){
+      msg.textContent="❌ Сурет жүктелмеді: "+e.message;msg.style.color="#EF4444";return;
+    }
+  }
   var imgUrl=(document.getElementById("sqf-img-url")||{}).value||"";
 
   // Image upload if file selected
@@ -3550,10 +3604,10 @@ window.saveSSQ=async function(wrapId,listId,type){
     options:JSON.stringify(filled),
     correct_index:adminCtx.correctIdx||0,
     order_num:order,
-    image_url:imgUrl,
     difficulty:"medium"
   };
-  if(type==="hw")qData.explanation=expl.trim();
+  if(imgUrl)qData.image_url=imgUrl;
+  if(type==="hw"){qData.explanation=expl.trim();if(explImgUrl)qData.explanation_image_url=explImgUrl;}
   if(adminCtx.editQId)qData.id=adminCtx.editQId;
 
   msg.textContent="💾 Сақталуда...";msg.style.color="var(--text2)";msg.style.display="block";
