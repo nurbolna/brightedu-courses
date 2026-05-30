@@ -1136,7 +1136,7 @@ function showPage(id){
   var activeId=pageMap[id];
   if(activeId){var sel=document.getElementById(activeId);if(sel)sel.classList.add("active");}
 }
-function goHome(){if(user)showPage("dashboard");else renderLogin();}
+function goHome(){if(user){if(user.role==="admin")renderAdmin();else showPage("dashboard");}else renderLogin();}
 function renderHdrAuth(){
   var el=document.getElementById("hdr-auth");if(!el)return;
   if(user){
@@ -2639,7 +2639,7 @@ function renderAdminShell(){
   '<div class="admin-sidebar-title">Жүйе</div>'+
   '<button class="admin-nav-btn" id="anav-users" onclick="adminShowTab(\'users\')">👥 Оқушылар</button>'+
   '<div style="margin-top:auto;padding-top:20px">'+
-  '<button onclick="renderDashboard()"width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:12px;cursor:pointer">← Шығу</button>'+
+  '<button onclick="doLogout()" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid rgba(239,68,68,.2);background:rgba(239,68,68,.06);color:#EF4444;font-family:Inter,sans-serif;font-size:12px;cursor:pointer;font-weight:600">🚪 Шығу</button>'+
   '</div>'+
   '</div>'+
   '<div class="admin-content" id="admin-content"></div>'+
@@ -3691,10 +3691,15 @@ async function loadTopicSections(){
   var testEl=document.getElementById("tp-test-sec");
   if(!hwEl||!testEl)return;
 
-  var [hwQs, hwAttempts] = await Promise.all([
-    db.getHomework(topic.id),
-    user ? db.getHwAttempts(user.id, topic.id) : Promise.resolve([])
-  ]);
+  var hwQs=[], hwAttempts=[];
+  try{
+    var results = await Promise.all([
+      db.getHomework(topic.id),
+      user ? db.getHwAttempts(user.id, topic.id) : Promise.resolve([])
+    ]);
+    hwQs=results[0]||[];
+    hwAttempts=results[1]||[];
+  }catch(e){hwQs=[];hwAttempts=[];}
 
   ctx.hwQs = hwQs;
   ctx.hwAttempts = hwAttempts;
@@ -3964,16 +3969,36 @@ window.goTopic=async function(topicId){
   var el=document.getElementById("pg-topic");
   el.innerHTML='<div class="loading"><span class="spin" style="font-size:26px">⏳</span><p>'+t("loading")+'</p></div>';
   showPage("topic");
+  // Topic-ты ctx-тан іздейміз, жоқ болса DB-ден аламыз
   var topic=ctx.topics?ctx.topics.find(function(tp){return tp.id===topicId;}):null;
   if(!topic){
-    // Reload topics if needed
-    if(ctx.subject){
+    // Subject анықтаймыз
+    if(!ctx.subject){
+      // Екі пәннен де іздейміз
+      var mathTs=await db.getTopics("math");
+      var ctTs=await db.getTopics("ct");
+      topic=mathTs.find(function(tp){return tp.id===topicId;});
+      if(topic){ctx.subject="math";ctx.topics=mathTs;}
+      else{
+        topic=ctTs.find(function(tp){return tp.id===topicId;});
+        if(topic){ctx.subject="ct";ctx.topics=ctTs;}
+      }
+    }else{
       var ts=await db.getTopics(ctx.subject);
       ctx.topics=ts;
       topic=ts.find(function(tp){return tp.id===topicId;});
     }
   }
-  if(!topic)return;
+  if(!topic){
+    el.innerHTML='<div class="loading"><p style="color:var(--text2)">Тақырып табылмады</p><button onclick="renderCourseSelect()" style="margin-top:12px;padding:10px 20px;border-radius:9px;border:none;background:var(--blue);color:#fff;cursor:pointer">← Артқа</button></div>';
+    return;
+  }
+  // Progress аламыз
+  if(user&&(!ctx.pm||Object.keys(ctx.pm).length===0)){
+    var progList=await db.getProgress(user.id);
+    ctx.pm={};
+    progList.forEach(function(p){ctx.pm[p.subject+"_"+p.topic_id]={passed:p.passed,best_score:p.best_score};});
+  }
   var qs=await db.getQuestions(topicId);
   ctx.topicId=topicId;ctx.topic=topic;ctx.topicQs=qs;
   renderTopicPageNew();
