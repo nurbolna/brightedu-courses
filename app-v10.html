@@ -1451,6 +1451,7 @@ async function renderDashboard(){
   ]);
 
   var pm={};prog.forEach(function(p){pm[p.subject+"_"+p.topic_id]=p;});
+  ctx.allTopics={math:mathT,ct:ctT};ctx.allPm=pm;
   var md=mathT.filter(function(tp){return pm["math_"+tp.id]&&pm["math_"+tp.id].passed;}).length;
   var cd=ctT.filter(function(tp){return pm["ct_"+tp.id]&&pm["ct_"+tp.id].passed;}).length;
   var mock=myRes.filter(function(r){return r.type==="mock";});
@@ -1806,6 +1807,7 @@ async function renderCourseSelect(){
     user?db.getProgress(user.id):Promise.resolve([])
   ]);
   var pm={};prog.forEach(function(p){pm[p.subject+"_"+p.topic_id]=p;});
+  ctx.allTopics={math:mathT,ct:ctT};ctx.allPm=pm;
   var md=mathT.filter(function(tp){return pm["math_"+tp.id]&&pm["math_"+tp.id].passed;}).length;
   var cd=ctT.filter(function(tp){return pm["ct_"+tp.id]&&pm["ct_"+tp.id].passed;}).length;
 
@@ -1820,18 +1822,71 @@ async function renderCourseSelect(){
 function buildCCard(subj,ico,label,desc,total,done,topics,pm,bg){
   var pct=total>0?Math.round(done/total*100):0;
   var data="data-subj='"+subj+"'";
-  return'<div class="ccard" style="background:'+bg+'" onclick="goTopicList(\''+subj+'\','+JSON.stringify(topics).replace(/'/g,"&#39;")+','+JSON.stringify(pm).replace(/'/g,"&#39;")+')">'+
-  '<div class="cc-ico">'+ico+'</div>'+
-  '<div class="cc-title">'+label+'</div>'+
-  '<div class="cc-sub">'+desc+'</div>'+
-  '<div class="cc-sub" style="margin-bottom:10px">'+total+' '+t("topics")+'</div>'+
-  '<div style="height:5px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;margin-bottom:5px">'+
-  '<div style="height:100%;background:#22C55E;width:'+pct+'%;border-radius:3px"></div></div>'+
-  '<div class="cc-sub">'+done+'/'+total+' · '+pct+'%</div>'+
+  return'<div class="ccard" style="background:'+bg+'" onclick="selectCourse(\''+subj+'\')">'+
+  '<div style="font-size:28px;margin-bottom:6px">🖼</div>'+
+  '<div style="font-size:13px;color:var(--text2)">Суретті жүктеу үшін басыңыз</div>'+
+  '<div style="font-size:11px;color:var(--text2);margin-top:3px">JPG, PNG · макс 2MB</div>'+
+  '</div>'+
+  '<img id="ss-img-preview" class="img-preview" style="display:'+(adminCtx.ssImgUrl?"block":"none")+'" src="'+(adminCtx.ssImgUrl||"")+'"/>'+
+  '</div>'+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-img-url" value="'+escHtml(adminCtx.ssImgUrl)+'" placeholder="немесе сурет URL-ін қойыңыз" style="flex:1" oninput="syncSSImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearSSImage()" style="padding:8px 12px;font-size:12px">🗑 Өшіру</button>'+
+  '</div></div>'+
+  // Options
+  '<div class="adm-field">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+  '<label class="adm-label" style="margin-bottom:0">Жауап нұсқалары <span style="font-weight:400;text-transform:none;font-size:11px">(✓ — дұрыс жауап)</span></label>'+
+  '<div style="display:flex;gap:6px">'+
+  '<button onclick="addSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer">+ Қосу</button>'+
+  '<button onclick="removeSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#EF4444;font-size:12px;font-weight:700;cursor:pointer">− Өшіру</button>'+
+  '</div></div>'+
+  '<div id="sqf-opts">'+
+  opts.map(function(opt,i){
+    return'<div class="opt-editor" id="sopt-row-'+i+'">'+
+    '<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[i]+'</span>'+
+    '<input type="text" value="'+escHtml(opt)+'" placeholder="Нұсқа '+(i+1)+'"/>'+
+    '<button class="opt-correct-btn'+(i===(qData?qData.correct_index:0)?" correct":"")+'" id="sopt-correct-'+i+'" onclick="setSCorrectOpt('+i+')" title="Дұрыс жауап">✓</button>'+
+    '</div>';
+  }).join("")+
+  '</div></div>'+
+  // Explanation (HW only)
+  (isHw?
+  '<div class="adm-field"><label class="adm-label">Түсіндірме — міндетті емес</label>'+
+  '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>'+
+  '<div class="adm-field"><label class="adm-label">Түсіндірмеге сурет — міндетті емес</label>'+
+  '<div class="img-upload-area" id="ss-expl-img-area">'+
+  '<input type="file" accept="image/*" id="sqf-expl-image" onchange="previewExplImage(event)"/>'+
+  '<div id="ss-expl-img-placeholder"'+(qData&&qData.explanation_image_url?' style="display:none"':'')+'>'+
+  '<div style="font-size:24px;margin-bottom:4px">🖼</div>'+
+  '<div style="font-size:12px;color:var(--text2)">Түсіндірмеге сурет жүктеу</div>'+
+  '</div>'+
+  '<img id="ss-expl-img-preview" class="img-preview" style="display:'+(qData&&qData.explanation_image_url?"block":"none")+'" src="'+(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'"/>'+
+  '</div>'+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-expl-img-url" value="'+escHtml(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'" placeholder="немесе URL қойыңыз" style="flex:1" oninput="syncExplImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearExplImage()" style="padding:8px 12px;font-size:12px">🗑</button>'+
+  '</div></div>':"")+ 
+  // Order
+  '<div class="adm-field"><label class="adm-label">Реті</label>'+
+  '<input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
+  '<div style="display:flex;gap:10px;margin-top:4px">'+
+  '<button class="adm-btn adm-btn-primary" onclick="saveSSQ(\''+wrapId+'\',\''+listId+'\',\''+type+'\')">💾 Сақтау</button>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="document.getElementById(\''+wrapId+'\').innerHTML=\'\'">Болдырмау</button>'+
+  '</div>'+
+  '<div id="sqf-msg" style="margin-top:10px;font-size:13px;display:none"></div>'+
   '</div>';
+
+  wrap.scrollIntoView({behavior:"smooth"});
 }
 
+
 // ── TOPIC LIST ────────────────────────────────────────────────
+function selectCourse(subj){
+  var topics=(ctx.allTopics&&ctx.allTopics[subj])||[];
+  var pm=ctx.allPm||{};
+  goTopicList(subj,topics,pm);
+}
 function goTopicList(subj,topics,pm){
   ctx.subject=subj;ctx.topics=topics;ctx.pm=pm||{};
   renderTopicList();showPage("topic-list");
@@ -1868,25 +1923,209 @@ function renderTopicList(){
   el.innerHTML=html;
 }
 
-// ── TOPIC PAGE ────────────────────────────────────────────────
-async function goTopic(topicId){
-  var el=document.getElementById("pg-topic");
-  el.innerHTML='<div class="loading"><span class="spin" style="font-size:26px">⏳</span><p>'+t("loading")+'</p></div>';
-  showPage("topic");
-  var topic=ctx.topics.find(function(tp){return tp.id===topicId;});
-  if(!topic)return;
-  var qs=await db.getQuestions(topicId);
-  ctx.topicId=topicId;ctx.topic=topic;ctx.topicQs=qs;
-  renderTopicPage();
-}
-function renderTopicPage(){
+
+window.setSCorrectOpt=function(idx){
+  adminCtx.correctIdx=idx;
+  for(var i=0;i<8;i++){
+    var btn=document.getElementById("sopt-correct-"+i);
+    if(btn)btn.className="opt-correct-btn"+(i===idx?" correct":"");
+  }
+};
+
+window.addSSOptRow=function(){
+  var container=document.getElementById("sqf-opts");
+  if(!container)return;
+  var rows=container.querySelectorAll(".opt-editor");
+  var idx=rows.length;
+  if(idx>=8){toast(lang==="kz"?"Максимум 8 нұсқа":"Максимум 8 вариантов","#F59E0B");return;}
+  var LETTERS="ABCDEFGH";
+  var div=document.createElement("div");
+  div.className="opt-editor";div.id="sopt-row-"+idx;
+  div.innerHTML='<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[idx]+'</span>'+
+  '<input type="text" placeholder="Нұсқа '+(idx+1)+'"/>'+
+  '<button class="opt-correct-btn" id="sopt-correct-'+idx+'" onclick="setSCorrectOpt('+idx+')" title="Дұрыс жауап">✓</button>';
+  container.appendChild(div);
+};
+
+window.removeSSOptRow=function(){
+  var container=document.getElementById("sqf-opts");
+  if(!container)return;
+  var rows=container.querySelectorAll(".opt-editor");
+  if(rows.length<=2){toast(lang==="kz"?"Минимум 2 нұсқа керек":"Минимум 2 варианта","#F59E0B");return;}
+  rows[rows.length-1].remove();
+  if(adminCtx.correctIdx>=rows.length-1){adminCtx.correctIdx=0;setSCorrectOpt(0);}
+};
+
+window.previewSSImage=function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=document.getElementById("ss-img-preview");
+    var placeholder=document.getElementById("ss-img-upload-placeholder");
+    var urlInput=document.getElementById("sqf-img-url");
+    if(img){img.src=ev.target.result;img.style.display="block";}
+    if(placeholder)placeholder.style.display="none";
+    adminCtx.ssImgUrl="__file__";
+  };
+  reader.readAsDataURL(file);
+};
+
+window.syncSSImgUrl=function(val){
+  adminCtx.ssImgUrl=val;
+  var img=document.getElementById("ss-img-preview");
+  var placeholder=document.getElementById("ss-img-upload-placeholder");
+  if(val){
+    if(img){img.src=val;img.style.display="block";}
+    if(placeholder)placeholder.style.display="none";
+  }else{
+    if(img){img.src="";img.style.display="none";}
+    if(placeholder)placeholder.style.display="block";
+  }
+};
+
+window.clearSSImage=function(){
+  var img=document.getElementById("ss-img-preview");
+  var placeholder=document.getElementById("ss-img-upload-placeholder");
+  var urlInput=document.getElementById("sqf-img-url");
+  var fileInput=document.getElementById("sqf-image");
+  adminCtx.ssImgUrl="";
+  if(img){img.src="";img.style.display="none";}
+  if(placeholder)placeholder.style.display="block";
+  if(urlInput)urlInput.value="";
+  if(fileInput)fileInput.value="";
+};
+window.previewExplImage=function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=document.getElementById("ss-expl-img-preview");
+    var ph=document.getElementById("ss-expl-img-placeholder");
+    if(img){img.src=ev.target.result;img.style.display="block";}
+    if(ph)ph.style.display="none";
+    adminCtx.explImgUrl="__file__";
+  };
+  reader.readAsDataURL(file);
+};
+window.syncExplImgUrl=function(val){
+  adminCtx.explImgUrl=val;
+  var img=document.getElementById("ss-expl-img-preview");
+  var ph=document.getElementById("ss-expl-img-placeholder");
+  if(val){if(img){img.src=val;img.style.display="block";}if(ph)ph.style.display="none";}
+  else{if(img){img.src="";img.style.display="none";}if(ph)ph.style.display="block";}
+};
+window.clearExplImage=function(){
+  var img=document.getElementById("ss-expl-img-preview");
+  var ph=document.getElementById("ss-expl-img-placeholder");
+  var url=document.getElementById("sqf-expl-img-url");
+  var fi=document.getElementById("sqf-expl-image");
+  adminCtx.explImgUrl="";
+  if(img){img.src="";img.style.display="none";}
+  if(ph)ph.style.display="block";
+  if(url)url.value="";
+  if(fi)fi.value="";
+};
+
+
+window.adminOpenHwForm=function(qId){
+  if(!qId){buildSSQForm("admin-hw-form-wrap","admin-hw-list","hw",null);return;}
+  db.getHomework(adminCtx.editTopicId).then(function(qs){
+    var q=qs.find(function(x){return x.id===qId;});
+    buildSSQForm("admin-hw-form-wrap","admin-hw-list","hw",q||null);
+  });
+};
+window.adminOpenSSTestForm=function(qId){
+  if(!qId){buildSSQForm("admin-sstest-form-wrap","admin-sstest-list","sstest",null);return;}
+  db.getQuestions(adminCtx.editTopicId).then(function(qs){
+    var q=qs.find(function(x){return x.id===qId;});
+    buildSSQForm("admin-sstest-form-wrap","admin-sstest-list","sstest",q||null);
+  });
+};
+
+window.saveSSQ=async function(wrapId,listId,type){
+  var msg=document.getElementById("sqf-msg");
+  var kz=(document.getElementById("sqf-kz")||{}).value||"";
+  var ru=(document.getElementById("sqf-ru")||{}).value||"";
+  if(!kz.trim()&&!ru.trim()){msg.textContent="⚠️ Сұрақ мәтінін енгізіңіз";msg.style.color="#EF4444";msg.style.display="block";return;}
+  var optInputs=document.querySelectorAll("#sqf-opts .opt-editor input[type=text]");
+  var opts=[];
+  optInputs.forEach(function(inp){opts.push(inp.value.trim());});
+  var filled=opts.filter(function(o){return o;});
+  if(filled.length<2){msg.textContent="⚠️ Кем дегенде 2 нұсқа керек";msg.style.color="#EF4444";msg.style.display="block";return;}
+  var order=parseInt((document.getElementById("sqf-order")||{}).value)||1;
+  var expl=(document.getElementById("sqf-expl")||{}).value||"";
+  var explImgUrl=(document.getElementById("sqf-expl-img-url")||{}).value||"";
+  // Upload expl image if file selected
+  var explFileInput=document.getElementById("sqf-expl-image");
+  if(explFileInput&&explFileInput.files&&explFileInput.files[0]){
+    msg.textContent="🖼 Түсіндірме суреті жүктелуде...";msg.style.color="var(--text2)";msg.style.display="block";
+    try{
+      explImgUrl=await db.uploadImage(explFileInput.files[0],"ss/expl/"+adminCtx.editTopicId+"/"+Date.now());
+    }catch(e){
+      msg.textContent="❌ Сурет жүктелмеді: "+e.message;msg.style.color="#EF4444";return;
+    }
+  }
+  var imgUrl=(document.getElementById("sqf-img-url")||{}).value||"";
+
+  // Image upload if file selected
+  var fileInput=document.getElementById("sqf-image");
+  if(fileInput&&fileInput.files&&fileInput.files[0]){
+    msg.textContent="🖼 Сурет жүктелуде...";msg.style.color="var(--text2)";msg.style.display="block";
+    try{
+      imgUrl=await db.uploadImage(fileInput.files[0],"ss/"+adminCtx.editTopicId+"/"+Date.now());
+    }catch(e){
+      msg.textContent="❌ Сурет жүктелмеді: "+e.message;msg.style.color="#EF4444";return;
+    }
+  }
+
+  var qData={
+    topic_id:adminCtx.editTopicId,
+    text_kz:kz.trim(),
+    text_ru:ru.trim(),
+    options:JSON.stringify(filled),
+    correct_index:adminCtx.correctIdx||0,
+    order_num:order,
+    difficulty:"medium"
+  };
+  if(imgUrl)qData.image_url=imgUrl;
+  if(type==="hw"){qData.explanation=expl.trim();if(explImgUrl)qData.explanation_image_url=explImgUrl;}
+  if(adminCtx.editQId)qData.id=adminCtx.editQId;
+
+  msg.textContent="💾 Сақталуда...";msg.style.color="var(--text2)";msg.style.display="block";
+  try{
+    if(type==="hw")await db.saveHomeworkQ(qData);
+    else await db.saveSSQuestion(qData);
+    msg.textContent="✅ Сақталды!";msg.style.color="#16A34A";
+    adminCtx.editQId=null;
+    setTimeout(function(){
+      document.getElementById(wrapId).innerHTML="";
+      if(type==="hw")renderAdminSSHw();else renderAdminSSTest();
+    },600);
+  }catch(e){msg.textContent="❌ "+e.message;msg.style.color="#EF4444";}
+};
+
+window.adminDeleteHwQ=async function(id){
+  if(!confirm("Сұрақты өшіресіз бе?"))return;
+  await db.deleteHomeworkQ(id);renderAdminSSHw();
+};
+window.adminDeleteSSTestQ=async function(id){
+  if(!confirm("Сұрақты өшіресіз бе?"))return;
+  await db.deleteSSQuestion(id);renderAdminSSTest();
+};
+// ── TOPIC PAGE: Homework + Test flow ─────────────────────────
+// Override renderTopicPage to add new flow
+var _origRenderTopicPage=null;
+
+function renderTopicPageNew(){
   var topic=ctx.topic,subj=ctx.subject;
   var name=lang==="kz"?topic.name_kz:topic.name_ru;
-  var vurl=topic.video_url||topic.videoUrl||"";
-  var hwurl=topic.homework_url||topic.homeworkUrl||"";
-  var solurl=topic.homework_solution_url||topic.homeworkSolutionUrl||"";
+  var vurl=topic.video_url||"";
+  var hwurl=topic.homework_url||"";
+  var solurl=topic.homework_solution_url||"";
   var vsrc=getVideoSrc(vurl);
   var el=document.getElementById("pg-topic");
+  var pm=ctx.pm||{};
+  var key=subj+"_"+topic.id;
+  var topicPassed=pm[key]&&pm[key].passed;
 
   var videoHtml=vsrc?
     '<div style="border-radius:14px;overflow:hidden;background:#000;box-shadow:0 6px 24px rgba(0,0,0,.35);margin-bottom:16px">'+
@@ -1894,49 +2133,249 @@ function renderTopicPage(){
     '<div class="card" style="text-align:center;padding:28px;margin-bottom:16px">'+
     '<div style="font-size:36px;margin-bottom:8px">🎬</div><p style="font-size:14px;color:var(--text2)">'+t("noVideo")+'</p></div>';
 
-  var hwHtml='<div class="card" style="margin-bottom:16px"><div class="section-title">📋 '+t("homework")+'</div>';
-  if(hwurl){
-    hwHtml+='<p style="font-size:13px;color:var(--text2);margin-bottom:12px">'+(lang==="kz"?"Тапсырманы орындаңыз, сосын шешімді тексеріңіз.":"Выполните задание, затем проверьте решение.")+'</p>'+
-    '<div style="display:flex;gap:9px;flex-wrap:wrap">'+
-    '<button onclick="openPDF(\''+hwurl+'\',\''+t("homework")+'\')" style="padding:10px 18px;border-radius:9px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">📄 '+(lang==="kz"?"Ашу":"Открыть")+'</button>'+
-    (solurl?'<button onclick="openPDF(\''+solurl+'\',\''+t("viewSolution")+'\')" style="padding:10px 18px;border-radius:9px;border:1px solid rgba(22,163,74,.3);background:rgba(22,163,74,.08);color:#16A34A;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">✅ '+t("viewSolution")+'</button>':'')+
-    '</div>';
-  }else{hwHtml+='<p style="font-size:13px;color:var(--text2)">'+t("noHw")+'</p>';}
-  hwHtml+='</div>';
+  // PDF materials
+  var pdfHtml='';
+  if(hwurl||solurl){
+    pdfHtml='<div class="card" style="margin-bottom:16px">'+
+    '<div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">📄 Материалдар</div>'+
+    '<div style="display:flex;flex-direction:column;gap:8px">';
+    if(hwurl)pdfHtml+=
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg2);border-radius:10px;cursor:pointer" onclick="openPDF(\''+hwurl+'\',\'Notes from Video\')">'+
+      '<span style="font-size:20px">📄</span>'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:600">Notes from Video</div><div style="font-size:11px;color:var(--text2)">PDF</div></div>'+
+      '<span style="color:var(--blue);font-size:13px">→</span></div>';
+    if(solurl)pdfHtml+=
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg2);border-radius:10px;cursor:pointer" onclick="openPDF(\''+solurl+'\',\'Additional Notes\')">'+
+      '<span style="font-size:20px">📋</span>'+
+      '<div style="flex:1"><div style="font-size:13px;font-weight:600">Additional Notes</div><div style="font-size:11px;color:var(--text2)">PDF</div></div>'+
+      '<span style="color:var(--blue);font-size:13px">→</span></div>';
+    pdfHtml+='</div></div>';
+  }
 
-  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderTopicList();showPage(\'topic-list\')">←</button>'+
+  el.innerHTML=
+  '<div class="app-hdr"><button class="back-btn" onclick="renderTopicList();showPage(\'topic-list\')">←</button>'+
   '<div><div class="app-title">'+name+'</div><div class="app-sub">'+(subj==="math"?t("math"):t("ct"))+'</div></div></div>'+
   '<div style="max-width:720px;margin:0 auto;padding:16px">'+
-  '<div class="tabs">'+
-  '<button class="tab-btn on" id="tab-v" onclick="switchTopicTab(\'video\')">🎬 '+t("videoLesson")+'</button>'+
-  '<button class="tab-btn off" id="tab-q" onclick="switchTopicTab(\'quiz\')">📝 '+t("startQuiz")+'</button>'+
-  '</div>'+
-  '<div id="tc-video">'+videoHtml+hwHtml+
-  '<button onclick="switchTopicTab(\'quiz\')" style="width:100%;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.3)">📝 '+t("startQuiz")+' →</button>'+
-  '</div>'+
-  '<div id="tc-quiz" style="display:none">'+buildModeSelect()+'</div>'+
+  '<div id="tp-video-sec">'+videoHtml+pdfHtml+'</div>'+
+  '<div id="tp-hw-sec"></div>'+
+  '<div id="tp-test-sec"></div>'+
   '</div>';
+
+  // Load hw attempts then render hw + test cards
+  loadTopicSections();
 }
-window.switchTopicTab=function(tab){
-  document.getElementById("tc-video").style.display=tab==="video"?"block":"none";
-  document.getElementById("tc-quiz").style.display=tab==="quiz"?"block":"none";
-  document.getElementById("tab-v").className="tab-btn "+(tab==="video"?"on":"off");
-  document.getElementById("tab-q").className="tab-btn "+(tab==="quiz"?"on":"off");
+
+async function loadTopicSections(){
+  var topic=ctx.topic,subj=ctx.subject;
+  var hwEl=document.getElementById("tp-hw-sec");
+  var testEl=document.getElementById("tp-test-sec");
+  if(!hwEl||!testEl)return;
+
+  var hwQs=[], hwAttempts=[];
+  try{
+    var results = await Promise.all([
+      db.getHomework(topic.id),
+      user ? db.getHwAttempts(user.id, topic.id) : Promise.resolve([])
+    ]);
+    hwQs=results[0]||[];
+    hwAttempts=results[1]||[];
+  }catch(e){hwQs=[];hwAttempts=[];}
+
+  ctx.hwQs = hwQs;
+  ctx.hwAttempts = hwAttempts;
+
+  var hwDone = hwAttempts.length > 0;
+  var hwAttemptsLeft = Math.max(0, 2 - hwAttempts.length);
+
+  // ── HOMEWORK CARD ──
+  if(hwQs.length > 0){
+    var lastAttempt = hwAttempts[0];
+    var hwStatusHtml = "";
+    if(lastAttempt){
+      var hwPct=Math.round(lastAttempt.score/lastAttempt.total*100);
+      var hwCol=hwPct>=85?"#16A34A":hwPct>=50?"#F59E0B":"#EF4444";
+      hwStatusHtml='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding:10px 14px;background:var(--bg2);border-radius:10px">'+
+      '<span style="font-size:18px">'+(hwPct>=85?"✅":"📊")+'</span>'+
+      '<div style="flex:1">'+
+      '<div style="font-size:12px;color:var(--text2)">'+(lang==="kz"?"Соңғы нәтиже":"Последний результат")+'</div>'+
+      '<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:800;color:'+hwCol+'">'+hwPct+'%</div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--text2)">'+lastAttempt.score+'/'+lastAttempt.total+'</div>'+
+      '</div>';
+    }
+    hwEl.innerHTML=
+    '<div class="card" style="margin-bottom:14px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="font-family:Syne,sans-serif;font-weight:800;font-size:16px">📝 '+t("hwQuiz")+'</div>'+
+    '<span style="font-size:11px;background:rgba(37,99,235,.1);color:var(--blue);padding:3px 10px;border-radius:20px;font-weight:700">'+hwQs.length+' '+(lang==="kz"?"сұрақ":"вопросов")+'</span>'+
+    '</div>'+
+    hwStatusHtml+
+    (hwAttemptsLeft>0?
+    '<button onclick="startHwQuiz()" style="width:100%;padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.3)">'+
+    '📝 '+(hwDone?t("retakeHw"):t("startHw"))+' ('+(lang==="kz"?"қалды":"осталось")+': '+hwAttemptsLeft+')'+'</button>':
+    '<div style="text-align:center;padding:10px;font-size:13px;color:var(--text2);background:var(--bg2);border-radius:9px">'+
+    (lang==="kz"?"Максимум 2 рет тапсырылды":"Использованы все 2 попытки")+'</div>')+
+    '</div>';
+  }
+
+  // ── TEST CARD ──
+  var testQs = ctx.topicQs||[];
+  var pm=ctx.pm||{};
+  var key=subj+"_"+topic.id;
+  var topicPassed=pm[key]&&pm[key].passed;
+  
+  if(testQs.length > 0){
+    testEl.innerHTML=
+    '<div class="card">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="font-family:Syne,sans-serif;font-weight:800;font-size:16px">✅ '+t("ssTest")+'</div>'+
+    '<span style="font-size:11px;background:rgba(37,99,235,.1);color:var(--blue);padding:3px 10px;border-radius:20px;font-weight:700">'+testQs.length+' '+(lang==="kz"?"сұрақ":"вопросов")+'</span>'+
+    '</div>'+
+    (topicPassed?
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 14px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2);border-radius:10px">'+
+    '<span style="font-size:18px">✅</span>'+
+    '<span style="font-size:13px;font-weight:600;color:#16A34A">'+(lang==="kz"?"Тақырып өтілді!":"Тема пройдена!")+'</span>'+
+    '</div>':'')+
+    (hwDone||hwQs.length===0?
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="startSSQuizNew(\'timer\')" style="flex:1;padding:11px;border-radius:10px;border:none;background:rgba(239,68,68,.1);color:#EF4444;border:1px solid rgba(239,68,68,.2);font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">⏱ '+(lang==="kz"?"Таймермен":"Таймер")+'</button>'+
+    '<button onclick="startSSQuizNew(\'practice\')" style="flex:1;padding:11px;border-radius:10px;border:none;background:rgba(22,163,74,.08);color:#16A34A;border:1px solid rgba(22,163,74,.2);font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">🌱 Practice</button>'+
+    '</div>':
+    '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px">'+
+    '<span style="font-size:18px">🔒</span>'+
+    '<span style="font-size:13px;color:#D97706">'+t("testLocked")+'</span>'+
+    '</div>')+
+    '</div>';
+  }
+}
+
+// Start homework quiz
+window.startHwQuiz=function(){
+  var qs=ctx.hwQs||[];
+  if(!qs.length){toast(lang==="kz"?"Үй жұмысы сұрақтары жоқ":"Нет вопросов д/з","#F59E0B");return;}
+  qState.mode="hw";qState.subject=ctx.subject;qState.topicId=ctx.topicId;
+  qState.qs=qs;qState.ans={};qState.cur=0;qState.submitted=false;qState.time=0;
+  clearInterval(qState.timer);
+  renderHwQuiz();showPage("topic");
 };
-function buildModeSelect(){
-  return'<div class="mode-card">'+
-  '<div style="font-size:48px;margin-bottom:12px">📝</div>'+
-  '<h2 style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;margin-bottom:6px">'+t("choosMode")+'</h2>'+
-  '<p style="font-size:13px;color:var(--text2);margin-bottom:0">'+(ctx.topicQs?ctx.topicQs.length:0)+' '+t("topics")+'</p>'+
-  '<div class="notice">⚠️ '+t("scoreOnly")+'</div>'+
-  '<div class="mode-btns">'+
-  '<button class="mbtn mbtn-t" onclick="startSSQuiz(\'timer\')">⏱ '+t("timerMode")+'</button>'+
-  '<button class="mbtn mbtn-p" onclick="startSSQuiz(\'practice\')">🌱 '+t("practiceMode")+'</button>'+
+
+function renderHwQuiz(){
+  if(!qState.qs.length)return;
+  var q=qState.qs[qState.cur];
+  var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
+  var answered=Object.keys(qState.ans).length;
+  var pct=answered/qState.qs.length*100;
+  var el=document.getElementById("pg-topic");
+
+  var html='<div class="quiz-hdr">'+
+  '<button onclick="if(confirm(\''+(lang==="kz"?"Тесттен шығасыз ба?":"Выйти из теста?")+'\'))renderTopicPageNew();" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">←</button>'+
+  '<div style="background:rgba(37,99,235,.2);color:#60A5FA;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(37,99,235,.3)">📝 '+t("hwQuiz")+'</div>'+
+  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span>'+
+  '</div>'+
+  '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
+  '<div class="q-wrap">'+
+  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
+  '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' / '+qState.qs.length+'</span>'+
+  '</div>'+
+  '<div class="q-card"><div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
+  '<div class="opts">';
+  opts.forEach(function(opt,i){
+    var sel=qState.ans[q.id]===i;
+    html+='<div class="opt'+(sel?" sel":"")+'" onclick="pickHwAns(\''+q.id+'\','+i+')">'+
+    '<span class="opt-let">'+"ABCDE"[i]+'</span>'+
+    '<span class="opt-txt">'+opt+'</span></div>';
+  });
+  html+='</div>'+
+  '<div class="q-nav">'+
+  '<button class="qbtn qbtn-prev" onclick="hwNav(-1)" '+(qState.cur===0?"disabled":"")+'">← '+t("prev")+'</button>'+
+  '<div class="q-dots">';
+  qState.qs.forEach(function(q2,i){
+    var bg=i===qState.cur?"#2563EB":qState.ans[q2.id]!==undefined?"#22C55E":"var(--border)";
+    html+='<div class="qdot" onclick="hwGoto('+i+')" style="background:'+bg+'"></div>';
+  });
+  html+='</div>';
+  if(qState.cur<qState.qs.length-1){
+    html+='<button class="qbtn qbtn-next" onclick="hwNav(1)">'+t("next")+' →</button>';
+  }else{
+    html+='<button class="qbtn qbtn-done" onclick="askFinishHw()">✓ '+t("finish")+'</button>';
+  }
+  html+='</div>'+
+  '<div class="q-stats"><span>✅ '+answered+' '+t("answered")+'</span><span>⭕ '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
+  '</div>'+
+  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
+  el.innerHTML=html;
+}
+window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
+window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderHwQuiz();};
+window.hwGoto=function(i){qState.cur=i;renderHwQuiz();};
+window.askFinishHw=function(){
+  var a=Object.keys(qState.ans).length;
+  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeHwQuiz);
+};
+
+async function finalizeHwQuiz(){
+  if(qState.submitted)return;qState.submitted=true;
+  var qs=qState.qs;
+  var score=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
+  if(user)await db.saveHwAttempt(user.id,qState.topicId,qState.subject,score,qs.length);
+  // Update ctx.hwAttempts
+  ctx.hwAttempts=[{score:score,total:qs.length,created_at:new Date().toISOString()}].concat(ctx.hwAttempts||[]);
+  renderHwResult(score,qs);
+}
+
+function renderHwResult(score,qs){
+  var pct=Math.round(score/qs.length*100);
+  var el=document.getElementById("pg-topic");
+  el.innerHTML=
+  '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPageNew()">←</button>'+
+  '<div><div class="app-title">📊 '+t("hwResult")+'</div></div></div>'+
+  '<div style="max-width:720px;margin:0 auto;padding:16px">'+
+  '<div class="card" style="text-align:center;margin-bottom:16px">'+
+  '<div style="font-size:42px;margin-bottom:8px">'+(pct>=85?"🎉":"📚")+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:40px;font-weight:800;color:'+(pct>=85?"#16A34A":pct>=50?"#F59E0B":"#EF4444")+'">'+pct+'%</div>'+
+  '<div style="font-size:14px;color:var(--text2);margin-top:4px">'+score+'/'+qs.length+'</div>'+
+  '<button onclick="renderTopicPageNew()" style="margin-top:16px;padding:11px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
+  (lang==="kz"?"Тестке өту →":"К тесту →")+'</button>'+
+  '</div>'+
+  // All questions with results
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+  qs.map(function(q,qi){
+    var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
+    var userAns=qState.ans[q.id];
+    var isCorrect=userAns===q.correct_index;
+    var isSkipped=userAns===undefined;
+    return'<div class="card" style="border-left:4px solid '+(isSkipped?"var(--border)":isCorrect?"#16A34A":"#EF4444")+'">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+    '<span style="font-size:18px">'+(isSkipped?"⭕":isCorrect?"✅":"❌")+'</span>'+
+    '<span style="font-weight:700;font-size:14px">'+t("question")+' '+(qi+1)+'</span>'+
+    '<span style="margin-left:auto;font-size:12px;padding:2px 8px;border-radius:20px;background:'+(isCorrect?"rgba(22,163,74,.1)":"rgba(239,68,68,.1)")+';color:'+(isCorrect?"#16A34A":"#EF4444")+';font-weight:700">'+
+    (isSkipped?(lang==="kz"?"Жауапсыз":"Пропущен"):isCorrect?(lang==="kz"?"Дұрыс":"Верно"):(lang==="kz"?"Қате":"Неверно"))+
+    '</span></div>'+
+    '<div style="font-size:14px;line-height:1.6;margin-bottom:10px;font-weight:500">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div>'+
+    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">'+
+    opts.map(function(opt,j){
+      var isUser=j===userAns;
+      var isCorr=j===q.correct_index;
+      var bg=isUser&&isCorrect?"rgba(22,163,74,.12)":isUser&&!isCorrect?"rgba(239,68,68,.1)":isCorr&&!isCorrect?"rgba(22,163,74,.06)":"var(--bg2)";
+      var border=isUser&&isCorrect?"1.5px solid #16A34A":isUser&&!isCorrect?"1.5px solid #EF4444":isCorr&&!isCorrect?"1.5px solid rgba(22,163,74,.4)":"1px solid var(--border)";
+      var ico=isUser&&isCorrect?"✅ ":isUser&&!isCorrect?"❌ ":isCorr&&!isCorrect?"✓ ":"";
+      return'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:'+bg+';border:'+border+'">'+
+      '<span style="width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+"ABCD"[j]+'</span>'+
+      '<span style="font-size:13px">'+ico+opt+'</span></div>';
+    }).join("")+
+    '</div>'+
+    (q.explanation?
+    '<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:12px">'+
+    '<div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</div>'+
+    '<div style="font-size:13px;line-height:1.6;color:var(--text)">'+q.explanation+'</div>'+
+    '</div>':"")+
+    '</div>';
+  }).join("")+
   '</div></div>';
 }
 
-// ── SS QUIZ ───────────────────────────────────────────────────
-window.startSSQuiz=function(mode){
+// New SS test start (with hw lock check)
+window.startSSQuizNew=function(mode){
   qState.mode=mode;qState.subject=ctx.subject;qState.topicId=ctx.topicId;
   qState.qs=ctx.topicQs||[];qState.ans={};qState.cur=0;qState.submitted=false;
   var TOTAL=mode==="timer"?qState.qs.length*60:0;
@@ -1947,75 +2386,19 @@ window.startSSQuiz=function(mode){
       qState.time--;
       var el=document.getElementById("q-timer-el");
       if(el){el.textContent="⏱ "+fmtTime(qState.time);el.className=qState.time<60?"q-timer warn":"q-timer";}
-      if(qState.time<=0){clearInterval(qState.timer);finalizeSSQuiz();}
+      if(qState.time<=0){clearInterval(qState.timer);finalizeSSQuizNew();}
     },1000);
   }
   renderSSQuiz();showPage("topic");
 };
 
-function renderSSQuiz(){
-  if(!qState.qs.length){
-    document.getElementById("pg-topic").innerHTML=
-    '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPage();showPage(\'topic\')">←</button>'+
-    '<div class="app-title">'+t("startQuiz")+'</div></div>'+
-    '<div class="empty"><div class="empty-ico">❓</div><p style="font-size:14px">Сұрақтар жоқ. Admin панелінен қосыңыз.</p></div>';
-    return;
-  }
-  var q=qState.qs[qState.cur];
-  var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-  var answered=Object.keys(qState.ans).length;
-  var pct=answered/qState.qs.length*100;
-  var el=document.getElementById("pg-topic");
-
-  var html='<div class="quiz-hdr">'+
-  '<button onclick="backFromQuiz()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">←</button>'+
-  (qState.mode==="timer"?'<div class="q-timer" id="q-timer-el">⏱ '+fmtTime(qState.time)+'</div>':
-  '<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">🌱 Practice</div>')+
-  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span>'+
-  '</div>'+
-  '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
-  '<div class="q-wrap">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' '+t("of")+' '+qState.qs.length+'</span>'+
-  '<span style="padding:3px 10px;border-radius:20px;font-size:11px;background:var(--bl);color:var(--blue)">'+(q.difficulty==="easy"?"🟢":q.difficulty==="medium"?"🟡":"🔴")+'</span>'+
-  '</div>'+
-  '<div class="q-card"><div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
-  '<div class="opts">';
-  opts.forEach(function(opt,i){
-    var sel=qState.ans[q.id]===i;
-    html+='<div class="opt'+(sel?" sel":"")+'" onclick="pickSSAns(\''+q.id+'\','+i+')">'+
-    '<span class="opt-let">'+"ABCDE"[i]+'</span>'+
-    '<span class="opt-txt">'+opt+'</span></div>';
-  });
-  html+='</div>'+
-  '<div class="q-nav">'+
-  '<button class="qbtn qbtn-prev" onclick="ssNav(-1)" '+(qState.cur===0?"disabled":"")+'">← '+t("prev")+'</button>'+
-  '<div class="q-dots">';
-  qState.qs.forEach(function(q2,i){
-    var bg=i===qState.cur?"#2563EB":qState.ans[q2.id]!==undefined?"#22C55E":"var(--border)";
-    html+='<div class="qdot" onclick="ssGoto('+i+')" style="background:'+bg+'"></div>';
-  });
-  html+='</div>';
-  if(qState.cur<qState.qs.length-1){
-    html+='<button class="qbtn qbtn-next" onclick="ssNav(1)">'+t("next")+' →</button>';
-  }else{
-    html+='<button class="qbtn qbtn-done" onclick="askFinishSS()">✓ '+t("finish")+'</button>';
-  }
-  html+='</div>'+
-  '<div class="q-stats"><span>✅ '+answered+' '+t("answered")+'</span><span>⭕ '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
-  '</div>'+
-  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
-  el.innerHTML=html;
-}
-window.pickSSAns=function(qId,i){qState.ans[qId]=i;renderSSQuiz();};
-window.ssNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderSSQuiz();};
-window.ssGoto=function(i){qState.cur=i;renderSSQuiz();};
-window.backFromQuiz=function(){clearInterval(qState.timer);renderTopicPage();showPage("topic");};
+// Override finalize to use new result page
 window.askFinishSS=function(){
   var a=Object.keys(qState.ans).length;
-  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeSSQuiz);
+  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeSSQuizNew);
 };
-async function finalizeSSQuiz(){
+
+async function finalizeSSQuizNew(){
   if(qState.submitted)return;qState.submitted=true;clearInterval(qState.timer);
   var score=qState.qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
   var pct=Math.round(score/qState.qs.length*100);
@@ -2026,590 +2409,81 @@ async function finalizeSSQuiz(){
     if(passed){if(!ctx.pm)ctx.pm={};ctx.pm[qState.subject+"_"+qState.topicId]={passed:true,best_score:score};}
   }
   var topicIdx=ctx.topics.findIndex(function(tp){return tp.id===qState.topicId;});
-  ctx.ssResult={score:score,total:qState.qs.length,pct:pct,passed:passed,nextTopic:ctx.topics[topicIdx+1]};
-  renderSSResult();showPage("ss-result");
-}
-function renderSSResult(){
-  var r=ctx.ssResult;
-  var gc=r.passed?"#16A34A":"#EF4444";
-  var el=document.getElementById("pg-ss-result");
-  el.innerHTML='<div class="result-wrap">'+
-  '<div class="result-card">'+
-  '<div class="r-emoji">'+(r.passed?"🎉":"💪")+'</div>'+
-  '<div class="r-pct" style="color:'+gc+'">'+r.pct+'%</div>'+
-  '<div class="r-label" style="color:'+gc+'">'+r.score+'/'+r.total+' '+(r.pct>=90?t("excellent"):r.pct>=70?t("good"):t("needPractice"))+'</div>'+
-  '<div class="r-stats">'+
-  '<div class="rs"><div class="rs-n" style="color:'+gc+'">'+r.pct+'%</div><div class="rs-l">'+(lang==="kz"?"Балл":"Балл")+'</div></div>'+
-  '<div class="rs"><div class="rs-n" style="color:#16A34A">'+r.score+'</div><div class="rs-l">'+t("correct")+'</div></div>'+
-  '<div class="rs"><div class="rs-n" style="color:#EF4444">'+(r.total-r.score)+'</div><div class="rs-l">'+t("wrong")+'</div></div>'+
-  '</div>'+
-  '<div class="notice">⚠️ '+t("scoreOnly")+'</div>'+
-  '<div class="r-pass '+(r.passed?"ok":"fail")+'"><p>'+(r.passed?t("passed"):t("failed"))+'</p></div>'+
-  '<div style="height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-bottom:5px">'+
-  '<div style="height:100%;background:'+gc+';width:'+r.pct+'%;border-radius:3px;transition:width 1s"></div></div>'+
-  '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:18px">'+
-  '<span>0%</span><span style="color:#F59E0B">85%</span><span>100%</span></div>'+
-  '<div class="r-btns">'+
-  (r.passed&&r.nextTopic?'<button class="rbtn rbtn-gr" onclick="goTopic(\''+r.nextTopic.id+'\')">'+t("nextTopic")+'</button>':'')+
-  '<button class="rbtn rbtn-bl" onclick="startSSQuiz(\''+qState.mode+'\')">🔄 '+t("retake")+'</button>'+
-  '<button class="rbtn rbtn-ol" onclick="renderTopicList();showPage(\'topic-list\')">📚 '+t("backTopics")+'</button>'+
-  '</div></div></div>';
+  renderSSTestResult(score,qState.qs.length,pct,passed,ctx.topics[topicIdx+1]);
 }
 
-// ── MOCK SELECT ───────────────────────────────────────────────
-async function renderMockSelect(){
-  var el=document.getElementById("pg-mock-select");
-  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-  '<div><div class="app-title">📝 '+t("mockTest")+'</div><div class="app-sub">'+t("chooseSubject")+'</div></div></div>'+
-  '<div class="loading"><span class="spin" style="font-size:22px">⏳</span></div>';
-  showPage("mock-select"); // ← АЛДЫМЕН showPage, сосын async
-
-  var mathTests=await db.getMockTests("math");
-  var ctTests=await db.getMockTests("ct");
-
-  var mockTab="math";
-  function buildTestList(tests,subj){
-    if(!tests.length)return'<div class="empty"><div class="empty-ico">📭</div><p style="font-size:13px">'+(lang==="kz"?"Тесттер жоқ. Админ қосады.":"Тесты не добавлены. Обратитесь к администратору.")+'</p></div>';
-    return'<div style="display:flex;flex-direction:column;gap:10px">'+
-    tests.map(function(test){
-      return'<div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--sh)">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-      '<div>'+
-      '<div style="font-family:Syne,sans-serif;font-weight:800;font-size:16px">'+
-      (subj==="math"?"📐":"🧠")+' '+(lang==="kz"?"Тест":"Тест")+' #'+test.number+
-      (test.title?(' <span style="font-size:13px;font-weight:500;color:var(--text2)">— '+test.title+'</span>'):"")+'</div>'+
-      '<div style="font-size:12px;color:var(--text2);margin-top:2px">30 '+(lang==="kz"?"сұрақ":"вопросов")+'</div>'+
-      '</div>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-      '<button onclick="startMock(\''+test.id+'\',\'timer\',\''+subj+'\')" style="flex:1;padding:10px;border-radius:9px;border:none;background:rgba(239,68,68,.12);color:#EF4444;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid rgba(239,68,68,.2)">⏱ '+t("timerMode")+' · 60 '+t("minutes")+'</button>'+
-      '<button onclick="startMock(\''+test.id+'\',\'practice\',\''+subj+'\')" style="flex:1;padding:10px;border-radius:9px;border:none;background:rgba(22,163,74,.08);color:#16A34A;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer;border:1px solid rgba(22,163,74,.2)">🌱 '+t("practiceMode")+'</button>'+
-      '</div></div>';
-    }).join("")+'</div>';
-  }
-
-  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-  '<div><div class="app-title">📝 '+t("mockTest")+'</div><div class="app-sub">'+t("chooseSubject")+'</div></div></div>'+
-  '<div style="max-width:680px;margin:0 auto;padding:20px 16px">'+
-  '<div class="tabs" style="margin-bottom:16px">'+
-  '<button class="tab-btn on" id="mt-math" onclick="switchMockTab(\'math\')">📐 '+t("math")+'</button>'+
-  '<button class="tab-btn off" id="mt-ct" onclick="switchMockTab(\'ct\')">🧠 '+t("ct")+'</button>'+
-  '</div>'+
-  '<div id="mt-math-c">'+buildTestList(mathTests,"math")+'</div>'+
-  '<div id="mt-ct-c" style="display:none">'+buildTestList(ctTests,"ct")+'</div>'+
-  '</div>';
-
-  window.switchMockTab=function(tab){
-    mockTab=tab;
-    document.getElementById("mt-math").className="tab-btn "+(tab==="math"?"on":"off");
-    document.getElementById("mt-ct").className="tab-btn "+(tab==="ct"?"on":"off");
-    document.getElementById("mt-math-c").style.display=tab==="math"?"block":"none";
-    document.getElementById("mt-ct-c").style.display=tab==="ct"?"block":"none";
-  };
-}
-
-// ── MOCK TEST ─────────────────────────────────────────────────
-window.startMock=async function(testId,mode,subj){
-  // Жаңа тест — submitted reset
-  qState.submitted=false;
-  qState.flags={};
-  qState.ans={};
-  var el=document.getElementById("pg-mock");
-  el.innerHTML='<div class="loading"><span class="spin" style="font-size:26px">⏳</span><p>'+t("loading")+'</p></div>';
-  showPage("mock");
-  var qs=await db.getMockQsByTest(testId);
-  if(!qs.length){qs=getDemoQuestions(subj||"math");}
-  // await аяқталды — бет өзгерген бе тексер
-  if(curPage!=="mock")return;
-  qState.mode=mode;qState.subject=subj||"math";qState.testId=testId;
-  qState.qs=qs;qState.cur=0;
-  var TOTAL=mode==="timer"?60*60:0;qState.time=TOTAL;
-  clearInterval(qState.timer);
-  if(mode==="timer"){
-    qState.timer=setInterval(function(){
-      qState.time--;
-      var et=document.getElementById("m-timer-el");
-      if(et){et.textContent="⏱ "+fmtTime(qState.time);et.className=qState.time<300?"q-timer warn":"q-timer";}
-      updateMockNavDots();
-      if(qState.time<=0){clearInterval(qState.timer);finalizeMock();}
-    },1000);
-  }
-  renderMockQuiz();
-};
-
-function updateMockNavDots(){
-  qState.qs.forEach(function(q,i){
-    var dot=document.getElementById("mnav-"+i);
-    if(!dot)return;
-    var cls="mnav-dot";
-    if(qState.ans[q.id]!==undefined)cls+=" answered";
-    if(qState.flags[q.id])cls+=" flagged";
-    dot.className=cls;
-  });
-  var answered=Object.keys(qState.ans).length;
-  var flagged=Object.keys(qState.flags).filter(function(k){return qState.flags[k];}).length;
-  var statEl=document.getElementById("mock-stat-answered");
-  var flagEl=document.getElementById("mock-stat-flagged");
-  if(statEl)statEl.textContent=answered+"/"+qState.qs.length;
-  if(flagEl)flagEl.textContent=flagged;
-}
-
-function renderMockQuiz(){
-  // Егер бет өзгерген болса — render жасама
-  if(curPage!=="mock")return;
-  var el=document.getElementById("pg-mock");
-  var answered=Object.keys(qState.ans).length;
-  var pct=answered/qState.qs.length*100;
-
-  // Build sidebar nav
-  var navDots="";
-  qState.qs.forEach(function(q,i){
-    var cls="mnav-dot";
-    if(qState.ans[q.id]!==undefined)cls+=" answered";
-    if(qState.flags[q.id])cls+=" flagged";
-    navDots+='<div class="'+cls+'" id="mnav-'+i+'" onclick="scrollToQ('+i+')" title="'+(lang==="kz"?"Сұрақ":"Вопрос")+' '+(i+1)+'">'+(i+1)+'</div>';
-  });
-
-  // Build all questions
-  var questionsHtml="";
-  qState.qs.forEach(function(q,i){
-    var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-    var isFlagged=!!qState.flags[q.id];
-
-    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="qblock-'+i+'">'+
-    '<div class="q-block-hdr">'+
-    '<span class="q-num">'+(lang==="kz"?"Сұрақ":"Вопрос")+' '+(i+1)+'</span>'+
-    '<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="toggleFlag(\''+q.id+'\','+i+')" title="'+(lang==="kz"?"Белгілеу":"Отметить")+'">🚩</button>'+
-    '</div>'+
-    ((lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))?'<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div>':'')+
-    (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:320px;border-radius:10px;margin-bottom:14px;display:block"/>':'')+
-    '<div class="opts">';
-    opts.forEach(function(opt,j){
-      var sel=qState.ans[q.id]===j;
-      questionsHtml+='<div class="opt'+(sel?" sel":"")+'" onclick="pickMock(\''+q.id+'\','+j+','+i+')">'+
-      '<span class="opt-let">'+"ABCDE"[j]+'</span>'+
-      '<span class="opt-txt">'+opt+'</span></div>';
-    });
-    questionsHtml+='</div></div>';
-  });
-
-  var flaggedCount=Object.keys(qState.flags).filter(function(k){return qState.flags[k];}).length;
-
+function renderSSTestResult(score,total,pct,passed,nextTopic){
+  var gc=passed?"#16A34A":"#EF4444";
+  var el=document.getElementById("pg-topic");
   el.innerHTML=
-  // Sticky header
-  '<div class="quiz-hdr">'+
-  '<div style="display:flex;align-items:center;gap:10px">'+
-  '<button onclick="goMockSelect()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px;line-height:1">←</button>'+
-  '<span style="font-size:13px;color:rgba(255,255,255,.6);font-weight:600">'+(qState.subject==="math"?t("math"):t("ct"))+'</span>'+
+  '<div class="app-hdr"><button class="back-btn" onclick="renderTopicList();showPage(\'topic-list\')">←</button>'+
+  '<div><div class="app-title">📊 '+t("ssTest")+'</div></div></div>'+
+  '<div style="max-width:500px;margin:0 auto;padding:24px 16px">'+
+  '<div class="card" style="text-align:center;padding:32px">'+
+  '<div style="font-size:52px;margin-bottom:12px">'+(passed?"🎉":"💪")+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:52px;font-weight:800;color:'+gc+'">'+pct+'%</div>'+
+  '<div style="font-size:14px;color:var(--text2);margin-bottom:16px">'+score+'/'+total+'</div>'+
+  '<div style="height:8px;background:var(--bg2);border-radius:4px;overflow:hidden;margin-bottom:6px">'+
+  '<div style="height:100%;background:'+gc+';width:'+pct+'%;border-radius:4px;transition:width 1s"></div></div>'+
+  '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:20px">'+
+  '<span>0%</span><span style="color:#F59E0B;font-weight:700">85%</span><span>100%</span></div>'+
+  '<div style="padding:12px 16px;border-radius:10px;background:'+(passed?"rgba(22,163,74,.08)":"rgba(239,68,68,.08)")+';border:1px solid '+(passed?"rgba(22,163,74,.2)":"rgba(239,68,68,.2)")+';margin-bottom:20px">'+
+  '<div style="font-size:14px;font-weight:700;color:'+gc+'">'+(passed?(lang==="kz"?"✅ Өттіңіз! Келесі тақырып ашылды.":"✅ Прошли! Следующая тема открыта."):(lang==="kz"?"❌ Өтпедіңіз. 85%+ керек.":"❌ Не прошли. Нужно 85%+."))+'</div>'+
   '</div>'+
-  (qState.mode==="timer"?
-    '<div class="q-timer" id="m-timer-el">⏱ '+fmtTime(qState.time)+'</div>':
-    '<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">🌱 Practice</div>')+
-  '<button onclick="askFinishMock()" style="padding:8px 16px;border-radius:9px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">✓ '+t("finish")+'</button>'+
+  '<div style="display:flex;flex-direction:column;gap:8px">'+
+  (passed&&nextTopic?
+  '<button onclick="goTopic(\''+nextTopic.id+'\')" style="padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(22,163,74,.3)">'+
+  (lang==="kz"?"Келесі тақырып →":"Следующая тема →")+'</button>':'')+
+  (!passed?
+  '<button onclick="renderTopicPageNew()" style="padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
+  '📹 '+(lang==="kz"?"Қайта оқу →":"Повторить тему →")+'</button>':'')+
+  '<button onclick="startSSQuizNew(\''+qState.mode+'\')" style="padding:12px;border-radius:11px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">🔄 '+t("retake")+'</button>'+
+  '<button onclick="renderTopicList();showPage(\'topic-list\')" style="padding:12px;border-radius:11px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">📚 '+t("backTopics")+'</button>'+
   '</div>'+
-  '<div class="q-progress"><div class="q-prog-fill" id="m-prog-fill" style="width:'+pct+'%"></div></div>'+
-
-  // Main layout
-  '<div class="mock-layout">'+
-
-  // Questions column
-  '<div class="mock-main">'+questionsHtml+'</div>'+
-
-  // Sidebar
-  '<div class="mock-sidebar" id="mock-sidebar">'+
-  '<div class="mock-nav-panel">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-  '<div class="mock-nav-title" style="margin-bottom:0">'+(lang==="kz"?"НАВИГАЦИЯ":"НАВИГАЦИЯ")+'</div>'+
-  '<button onclick="toggleMockNav()" id="mock-nav-toggle" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(lang==="kz"?"Жасыру":"Скрыть")+'</button>'+
-  '</div>'+
-  '<div id="mock-nav-body">'+
-  '<div class="mock-stats-row">'+
-  '<span>✅ <b id="mock-stat-answered">'+answered+'/'+qState.qs.length+'</b></span>'+
-  '<span>🚩 <b id="mock-stat-flagged">'+flaggedCount+'</b></span>'+
-  '</div>'+
-  '<div class="mock-nav-grid">'+navDots+'</div>'+
-  '<div class="mock-nav-legend">'+
-  '<span><i class="legend-ans"></i>'+(lang==="kz"?"Жауапталған":"Отвечено")+'</span>'+
-  '<span><i class="legend-flag"></i>'+(lang==="kz"?"Белгіленген":"Отмечен")+'</span>'+
-  '<span><i class="legend-empty"></i>'+(lang==="kz"?"Жауапсыз":"Без ответа")+'</span>'+
-  '</div>'+
-  '<button class="mock-finish-btn" onclick="askFinishMock()">✓ '+t("finish")+'</button>'+
-  '</div>'+
-  '</div></div>'+
-
-  '</div>'+
-  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
-}
-
-window.toggleFlag=function(qId,idx){
-  qState.flags[qId]=!qState.flags[qId];
-  // Update block border
-  var block=document.getElementById("qblock-"+idx);
-  if(block)block.className="q-block"+(qState.flags[qId]?" flagged":"");
-  // Update flag button
-  var btn=block?block.querySelector(".q-flag-btn"):null;
-  if(btn)btn.className="q-flag-btn"+(qState.flags[qId]?" active":"");
-  updateMockNavDots();
-};
-
-window.pickMock=function(qId,selIdx,blockIdx){
-  qState.ans[qId]=selIdx;
-  var block=document.getElementById("qblock-"+blockIdx);
-  if(block){
-    block.querySelectorAll(".opt").forEach(function(opt,j){
-      var isSel=j===selIdx;
-      opt.className="opt"+(isSel?" sel":"");
-      var letEl=opt.querySelector(".opt-let");
-      if(letEl){
-        letEl.style.background=isSel?"#2563EB":"";
-        letEl.style.borderColor=isSel?"#2563EB":"";
-        letEl.style.color=isSel?"#fff":"";
-        letEl.style.boxShadow=isSel?"0 2px 8px rgba(37,99,235,.4)":"";
-      }
-    });
-  }
-  updateMockNavDots();
-  var pct=Object.keys(qState.ans).length/qState.qs.length*100;
-  var pf=document.getElementById("m-prog-fill");
-  if(pf)pf.style.width=pct+"%";
-};
-
-window.scrollToQ=function(idx){
-  var el=document.getElementById("qblock-"+idx);
-  if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
-};
-
-window.toggleMockNav=function(){
-  var body=document.getElementById("mock-nav-body");
-  var btn=document.getElementById("mock-nav-toggle");
-  var sidebar=document.getElementById("mock-sidebar");
-  if(!body)return;
-  var hidden=body.style.display==="none";
-  body.style.display=hidden?"block":"none";
-  if(btn)btn.textContent=hidden?(lang==="kz"?"Жасыру":"Скрыть"):(lang==="kz"?"Көрсету":"Показать");
-};
-
-window.goMockSelect=function(){
-  clearInterval(qState.timer);
-  qState.submitted=false;
-  renderMockSelect();
-};
-window.askFinishMock=function(){
-  var a=Object.keys(qState.ans).length;
-  var total=qState.qs.length;
-  var msg=a+"/"+total+" "+(lang==="kz"?"жауапталды":"отвечено");
-  showModal(t("confirmTitle"),msg,finalizeMock);
-};
-
-async function finalizeMock(){
-  if(qState.submitted)return;
-  qState.submitted=true;
-  clearInterval(qState.timer);
-  var score=qState.qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
-  ctx.mockResult={subject:qState.subject,score:score,total:qState.qs.length,mode:qState.mode,testId:qState.testId,qs:qState.qs,ans:qState.ans};
-  showPage("mock-result");
-  try{renderMockResult();}catch(e){
-    document.getElementById("pg-mock-result").innerHTML=
-    '<div style="padding:40px;text-align:center">'+
-    '<div style="font-size:48px;margin-bottom:12px">'+(score/qState.qs.length>=0.75?"🏆":"💪")+'</div>'+
-    '<div style="font-family:Syne,sans-serif;font-size:32px;font-weight:800;color:#16A34A">'+Math.round(score/qState.qs.length*100)+'%</div>'+
-    '<div style="font-size:16px;margin:8px 0 20px">'+score+'/'+qState.qs.length+'</div>'+
-    '<button onclick="renderMockSelect()" style="padding:12px 24px;border-radius:10px;border:none;background:#2563EB;color:#fff;font-weight:700;cursor:pointer">← Артқа</button>'+
-    '</div>';
-  }
-  // Challenge нәтижесін сақтау немесе жіберу формасын көрсету
-  if(ctx.activeChallenge&&ctx.activeChallenge.id){
-    try{
-      var ch=await db.acceptChallenge(ctx.activeChallenge.id,score,qState.qs.length);
-      ctx.activeChallenge=null;
-      setTimeout(function(){renderChallengeResult(ch,score,qState.qs.length);},300);
-    }catch(e){ctx.activeChallenge=null;}
-  } else {
-    // Challenge inline нәтиже бетінде — қосымша шақыру керек емес
-  }
-  if(user)db.saveResult(user.id,user.name,qState.subject,"mock",score,qState.qs.length,qState.mode,qState.mode==="timer"?60*60-qState.time:0).catch(function(){});
-}
-
-// ── CHALLENGE RESULT (VS экран) ───────────────────────────────
-function renderChallengeResult(challenge,myScore,myTotal){
-  var pg=document.getElementById("pg-mock-result");
-  if(!pg)return;
-  var myPct=Math.round(myScore/myTotal*100);
-  var theirPct=challenge.from_total?Math.round(challenge.from_score/challenge.from_total*100):0;
-  var iWon=myPct>theirPct;
-  var isDraw=myPct===theirPct;
-  var myCol=myPct>=75?"#16A34A":myPct>=50?"#F59E0B":"#EF4444";
-  var theirCol=theirPct>=75?"#16A34A":theirPct>=50?"#F59E0B":"#EF4444";
-
-  var vsBlock=document.createElement("div");
-  vsBlock.style.cssText="max-width:800px;margin:0 auto;padding:0 16px 24px";
-  vsBlock.innerHTML=
-  '<div class="challenge-result">'+
-  '<div style="text-align:center;margin-bottom:16px">'+
-  '<div style="font-size:36px;margin-bottom:6px">'+(isDraw?"🤝":iWon?"🏆":"💪")+'</div>'+
-  '<div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800">'+
-  (isDraw?(lang==="kz"?"Тең нәтиже!":"Ничья!"):iWon?(lang==="kz"?"Сен жеңдің!":"Ты победил!"):(lang==="kz"?"Досың жеңді!":"Друг победил!"))+
-  '</div></div>'+
-  '<div class="challenge-vs">'+
-  '<div class="challenge-score">'+
-  '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+(lang==="kz"?"Сен":"Ты")+'</div>'+
-  '<div class="challenge-score-num" style="color:'+myCol+'">'+myPct+'%</div>'+
-  '<div class="challenge-score-lbl">'+myScore+'/'+myTotal+'</div>'+
-  '</div>'+
-  '<div class="challenge-vs-ico">VS</div>'+
-  '<div class="challenge-score">'+
-  '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+challenge.from_user_name+'</div>'+
-  '<div class="challenge-score-num" style="color:'+theirCol+'">'+theirPct+'%</div>'+
-  '<div class="challenge-score-lbl">'+challenge.from_score+'/'+challenge.from_total+'</div>'+
-  '</div></div>'+
-  '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-  '<button onclick="renderMockSelect()" style="flex:1;padding:11px;border-radius:9px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">📝 '+(lang==="kz"?"Жаңа тест":"Новый тест")+'</button>'+
-  '<button onclick="renderDashboard()" style="flex:1;padding:11px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">🏠 '+(lang==="kz"?"Басты бет":"Главная")+'</button>'+
   '</div></div>';
-  pg.appendChild(vsBlock);
 }
 
-function renderMockResult(){
-  var r=ctx.mockResult;
-  var pct=Math.round(r.score/r.total*100);
-  var gc=pct>=75?"#16A34A":pct>=50?"#F59E0B":"#EF4444";
-  var grade=pct>=90?t("excellent"):pct>=75?t("good"):t("needPractice");
-  var el=document.getElementById("pg-mock-result");
-
-  var wrongCount=r.total-r.score;
-  var skippedCount=r.qs.filter(function(q){return r.ans[q.id]===undefined;}).length;
-
-  // Build review list
-  var reviewFilter="all";
-
-  function buildReview(filter){
-    var items=r.qs.filter(function(q){
-      var userAns=r.ans[q.id];
-      var isCorrect=userAns===q.correct_index;
-      var isSkipped=userAns===undefined;
-      if(filter==="correct")return isCorrect;
-      if(filter==="wrong")return !isCorrect&&!isSkipped;
-      if(filter==="skip")return isSkipped;
-      return true;
-    });
-    if(!items.length)return'<div class="empty" style="padding:32px"><p style="font-size:13px">'+(lang==="kz"?"Нәтиже жоқ":"Нет результатов")+'</p></div>';
-    return items.map(function(q,qi){
-      var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-      var userAns=r.ans[q.id];
-      var isCorrect=userAns===q.correct_index;
-      var isSkipped=userAns===undefined;
-      var statusClass=isSkipped?"skip":isCorrect?"correct":"wrong";
-      var statusLabel=isSkipped?(lang==="kz"?"Жауапсыз":"Пропущен"):isCorrect?(lang==="kz"?"Дұрыс":"Верно"):(lang==="kz"?"Қате":"Неверно");
-      var qIdx=r.qs.indexOf(q);
-
-      var answersHtml=opts.map(function(opt,j){
-        var isUser=j===userAns;
-        var isCorrectOpt=j===q.correct_index;
-        var cls="review-ans";
-        var ico="";
-        if(isUser&&isCorrect){cls+=" user-correct";ico="✅";}
-        else if(isUser&&!isCorrect){cls+=" user-wrong";ico="❌";}
-        else if(isCorrectOpt&&!isCorrect){cls+=" correct-ans";ico="✓";}
-        else{cls+=" neutral";}
-        return'<div class="'+cls+'">'+
-        (ico?'<span class="review-ans-ico">'+ico+'</span>':'')+
-        '<span class="opt-let" style="font-size:11px;width:22px;height:22px;flex-shrink:0">'+"ABCDE"[j]+'</span>'+
-        '<span style="font-size:13px">'+opt+'</span></div>';
-      }).join("");
-
-      var videoSrc=q.video_url?getVideoSrc(q.video_url):null;
-
-      return'<div class="review-item" id="rv-'+qIdx+'">'+
-      '<div class="review-item-hdr">'+
-      '<span class="review-q-num">'+(lang==="kz"?"Сұрақ":"Вопрос")+' '+(qIdx+1)+'</span>'+
-      '<span class="review-status '+statusClass+'">'+statusLabel+'</span>'+
-      '</div>'+
-      '<div class="review-q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div>'+
-      (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:220px;border-radius:8px;margin-bottom:10px;display:block"/>':'')+
-      '<div class="review-answers">'+answersHtml+'</div>'+
-      (videoSrc?'<button class="review-video-btn" onclick="openVideoModal(\''+videoSrc+'\','+(qIdx+1)+')">▶ '+t("watchVideo")+'</button>':'')+
-      '</div>';
-    }).join("");
+// ── OVERRIDE goTopic to use new renderTopicPageNew ────────────
+var _origGoTopic=window.goTopic;
+window.goTopic=async function(topicId){
+  var el=document.getElementById("pg-topic");
+  el.innerHTML='<div class="loading"><span class="spin" style="font-size:26px">⏳</span><p>'+t("loading")+'</p></div>';
+  showPage("topic");
+  // Topic-ты ctx-тан іздейміз, жоқ болса DB-ден аламыз
+  var topic=ctx.topics?ctx.topics.find(function(tp){return tp.id===topicId;}):null;
+  if(!topic){
+    // Subject анықтаймыз
+    if(!ctx.subject){
+      // Екі пәннен де іздейміз
+      var mathTs=await db.getTopics("math");
+      var ctTs=await db.getTopics("ct");
+      topic=mathTs.find(function(tp){return tp.id===topicId;});
+      if(topic){ctx.subject="math";ctx.topics=mathTs;}
+      else{
+        topic=ctTs.find(function(tp){return tp.id===topicId;});
+        if(topic){ctx.subject="ct";ctx.topics=ctTs;}
+      }
+    }else{
+      var ts=await db.getTopics(ctx.subject);
+      ctx.topics=ts;
+      topic=ts.find(function(tp){return tp.id===topicId;});
+    }
   }
-
-  el.innerHTML=
-  '<div class="app-hdr"><button class="back-btn" onclick="renderMockSelect()">←</button>'+
-  '<div><div class="app-title">📊 '+t("mockTest")+' — '+t("review")+'</div>'+
-  '<div class="app-sub">'+(r.subject==="math"?t("math"):t("ct"))+(r.mode==="timer"?" · ⏱":" · 🌱")+'</div></div></div>'+
-
-  '<div class="mock-result-wrap">'+
-
-  // Hero score
-  '<div class="mock-result-hero">'+
-  '<div class="mock-result-score" style="color:'+gc+'">'+pct+'%</div>'+
-  '<div class="mock-result-label" style="color:'+gc+'">'+r.score+'/'+r.total+' · '+grade+'</div>'+
-  '<div class="mock-result-stats">'+
-  '<div class="mrs"><div class="mrs-n" style="color:#16A34A">'+r.score+'</div><div class="mrs-l">'+t("correctQ")+'</div></div>'+
-  '<div class="mrs"><div class="mrs-n" style="color:#EF4444">'+wrongCount+'</div><div class="mrs-l">'+t("wrongQ")+'</div></div>'+
-  '<div class="mrs"><div class="mrs-n" style="color:var(--text2)">'+skippedCount+'</div><div class="mrs-l">'+t("skippedQ")+'</div></div>'+
-  '</div>'+
-  '<div class="mock-result-btns">'+
-  '<button class="rbtn rbtn-bl" onclick="startMock(\''+r.testId+'\',\''+r.mode+'\',\''+r.subject+'\')">🔄 '+t("retake")+'</button>'+
-  '<button class="rbtn rbtn-ol" onclick="renderMockSelect()">📝 '+t("mockTest")+'</button>'+
-  '<button class="rbtn rbtn-ol" onclick="renderDashboard()">🏠 '+t("backHome")+'</button>'+
-  '</div></div>'+
-
-  // ⚔️ Challenge жіберу блогы — нәтиже мен тексеру АРАСЫНДА
-  '<div style="background:linear-gradient(135deg,#4C1D95,#1E40AF);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 4px 20px rgba(124,58,237,.25)">'+
-  '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
-  '<span style="font-size:24px">⚔️</span>'+
-  '<div>'+
-  '<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:800;color:#fff">'+
-  (lang==="kz"?"Досыңа challenge жібер!":"Брось вызов другу!")+'</div>'+
-  '<div style="font-size:12px;color:rgba(255,255,255,.7)">'+
-  (lang==="kz"?"Нәтижеңді жіберіп, одан асып түсуін сұра":"Отправь результат и посмотри, сможет ли он побить")+'</div>'+
-  '</div></div>'+
-  '<div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'+
-  '<span style="font-size:12px;color:rgba(255,255,255,.8)">'+(r.subject==="math"?"📐 Math":"🧠 CT")+' · '+r.mode+'</span>'+
-  '<span style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:'+gc+'">'+pct+'%</span>'+
-  '</div>'+
-  '<div style="display:flex;gap:8px">'+
-  '<input id="challenge-search-inline" type="text" placeholder="'+(lang==="kz"?"Реферал код немесе телефон (+7...)":"Реф. код или телефон (+7...)")+'" '+
-  'style="flex:1;padding:10px 13px;border-radius:9px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-family:Inter,sans-serif;font-size:13px;outline:none" />'+
-  '<button onclick="sendChallengeInline(\''+r.testId+'\',\''+r.subject+'\','+r.score+','+r.total+')" '+
-  'style="padding:10px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">'+
-  '⚔️ '+(lang==="kz"?"Жіберу":"Отправить")+'</button>'+
-  '</div>'+
-  '<div id="challenge-inline-msg" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.8);min-height:16px"></div>'+
-  '</div>'+
-
-  // Review section
-  '<div class="review-section" id="review-section">'+
-  '<div class="review-hdr">'+
-  '<span class="review-title">🔍 '+t("review")+'</span>'+
-  '<div class="review-filter">'+
-  '<button class="rf-btn on" id="rf-all" onclick="switchReview(\'all\')">'+t("allQ")+'</button>'+
-  '<button class="rf-btn" id="rf-wrong" onclick="switchReview(\'wrong\')" style="border-color:rgba(239,68,68,.3);color:#EF4444">❌ '+t("wrongQ")+'</button>'+
-  '<button class="rf-btn" id="rf-correct" onclick="switchReview(\'correct\')" style="border-color:rgba(22,163,74,.3);color:#16A34A">✅ '+t("correctQ")+'</button>'+
-  '</div></div>'+
-  '<div id="review-list">'+buildReview("all")+'</div>'+
-  '</div>'+
-
-  '</div>';
-
-  // Video modal
-  if(!document.getElementById("video-modal")){
-    var vm=document.createElement("div");
-    vm.id="video-modal";vm.className="video-modal-bg";vm.style.display="none";
-    vm.innerHTML='<div class="video-modal-box">'+
-    '<div class="video-modal-hdr">'+
-    '<span class="video-modal-title" id="vm-title">Видео шешім</span>'+
-    '<button class="video-modal-close" onclick="closeVideoModal()">✕</button>'+
-    '</div>'+
-    '<div class="video-modal-body"><iframe id="vm-iframe" src="" allow="autoplay;fullscreen" allowfullscreen></iframe></div>'+
-    '</div>';
-    document.body.appendChild(vm);
+  if(!topic){
+    el.innerHTML='<div class="loading"><p style="color:var(--text2)">Тақырып табылмады</p><button onclick="renderCourseSelect()" style="margin-top:12px;padding:10px 20px;border-radius:9px;border:none;background:var(--blue);color:#fff;cursor:pointer">← Артқа</button></div>';
+    return;
   }
-
-}
-
-  window.sendChallengeInline=async function(testId,subject,score,total){
-  var inp=document.getElementById("challenge-search-inline");
-  var msg=document.getElementById("challenge-inline-msg");
-  if(!inp||!msg)return;
-  var val=inp.value.trim();
-  if(!val){msg.textContent="⚠️ "+(lang==="kz"?"Код немесе телефон жазыңыз":"Введите код или телефон");return;}
-  msg.textContent=(lang==="kz"?"Іздеуде...":"Поиск...");
-  var found=await db.findUserByRefOrPhone(val);
-  if(!found){msg.textContent="❌ "+(lang==="kz"?"Оқушы табылмады":"Пользователь не найден");return;}
-  if(found.id===user.id){msg.textContent="⚠️ "+(lang==="kz"?"Өзіңе challenge жіберу мүмкін емес":"Нельзя вызвать самого себя");return;}
-  msg.textContent=(lang==="kz"?"Жіберілуде...":"Отправка...");
-  try{
-    await db.sendChallenge(user,found.id,found.name,testId,subject,score,total);
-    msg.textContent="✅ "+found.name+(lang==="kz"?"-ға challenge жіберілді! ⚔️":" получил вызов! ⚔️");
-    inp.value="";
-  }catch(e){msg.textContent="❌ "+(e.message||"Қате");}
+  // Progress аламыз
+  if(user&&(!ctx.pm||Object.keys(ctx.pm).length===0)){
+    var progList=await db.getProgress(user.id);
+    ctx.pm={};
+    progList.forEach(function(p){ctx.pm[p.subject+"_"+p.topic_id]={passed:p.passed,best_score:p.best_score};});
+  }
+  var qs=await db.getQuestions(topicId);
+  ctx.topicId=topicId;ctx.topic=topic;ctx.topicQs=qs;
+  renderTopicPageNew();
 };
 
-window.switchReview=function(filter){
-  ["all","wrong","correct"].forEach(function(f){
-    var btn=document.getElementById("rf-"+f);
-    if(btn)btn.className="rf-btn"+(f===filter?" on":"");
-  });
-  var list=document.getElementById("review-list");
-  if(list)list.innerHTML=buildReview(filter);
-};
-
-window.openVideoModal=function(src,qNum){
-  var vm=document.getElementById("video-modal");
-  if(!vm)return;
-  document.getElementById("vm-title").textContent=(lang==="kz"?"Сұрақ":"Вопрос")+" "+qNum+" — "+t("watchVideo");
-  document.getElementById("vm-iframe").src=src;
-  vm.style.display="flex";
-};
-window.closeVideoModal=function(){
-  var vm=document.getElementById("video-modal");
-  if(!vm)return;
-  vm.style.display="none";
-  document.getElementById("vm-iframe").src="";
-};
-
-// ── RATING ────────────────────────────────────────────────────
-async function renderRating(){
-  var el=document.getElementById("pg-rating");
-  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-  '<div class="app-title">🏆 '+t("rating")+'</div></div>'+
-  '<div class="loading"><span class="spin" style="font-size:22px">⏳</span></div>';
-  showPage("rating");
-  var all=await db.getLeaderboard();
-  var rTab="math";
-
-  function getBest(subj){
-    var best={};
-    all.filter(function(r){return r.subject===subj;}).forEach(function(r){
-      var name=r.user_name||r.userName||"—";
-      var uid=r.user_id||r.userId||name;
-      var pct=r.score/r.total*100;
-      if(!best[uid]||pct>best[uid].pct)
-        best[uid]={name:name,uid:uid,score:r.score,total:r.total,pct:pct};
-    });
-    return Object.values(best).sort(function(a,b){return b.pct-a.pct;}).slice(0,10);
-  }
-
-  function buildTable(rows){
-    if(!rows.length)return'<div class="empty"><div class="empty-ico">📭</div><p>'+t("noResults")+'</p></div>';
-    var h='<div class="r-table">'+
-    '<div class="r-th"><span>#</span><span>'+(lang==="kz"?"Оқушы":"Ученик")+'</span><span>'+(lang==="kz"?"Балл":"Балл")+'</span><span>%</span></div>';
-    rows.forEach(function(r,i){
-      var isMe=user&&(r.uid===user.id||r.name===user.name);
-      var c=r.pct>=85?"#16A34A":r.pct>=60?"#F59E0B":"#EF4444";
-      h+='<div class="r-row'+(isMe?" me":"")+'" style="grid-template-columns:44px 1fr 90px 65px">'+
-      '<span style="font-size:'+(i<3?16:13)+'px;font-weight:700">'+(i<3?["🥇","🥈","🥉"][i]:String(i+1))+'</span>'+
-      '<span style="font-size:13px;font-weight:'+(isMe?700:500)+';color:'+(isMe?"var(--blue)":"var(--text)")+'">'+r.name+(isMe?" ✓":"")+'</span>'+
-      '<span style="font-family:Syne,sans-serif;font-weight:800;color:'+c+'">'+r.score+'/'+r.total+'</span>'+
-      '<span style="font-family:Syne,sans-serif;font-weight:700;color:'+c+'">'+Math.round(r.pct)+'%</span></div>';
-    });
-    h+='</div>';return h;
-  }
-
-  function render(){
-    var mathR=getBest("math"),ctR=getBest("ct");
-    el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-    '<div><div class="app-title">🏆 '+t("rating")+'</div><div class="app-sub">'+t("ratingTop")+'</div></div></div>'+
-    '<div class="wrap">'+
-    '<div class="tabs">'+
-    '<button class="tab-btn '+(rTab==="math"?"on":"off")+'" id="rt-math" onclick="switchRT(\'math\')">📐 '+t("math")+'</button>'+
-    '<button class="tab-btn '+(rTab==="ct"?"on":"off")+'" id="rt-ct" onclick="switchRT(\'ct\')">🧠 '+t("ct")+'</button>'+
-    '</div>'+
-    '<div id="rt-math-c" style="display:'+(rTab==="math"?"block":"none")+'">'+buildTable(mathR)+'</div>'+
-    '<div id="rt-ct-c" style="display:'+(rTab==="ct"?"block":"none")+'">'+buildTable(ctR)+'</div>'+
-    '</div>';
-  }
-  window.switchRT=function(tab){
-    rTab=tab;
-    document.getElementById("rt-math").className="tab-btn "+(tab==="math"?"on":"off");
-    document.getElementById("rt-ct").className="tab-btn "+(tab==="ct"?"on":"off");
-    var mc=document.getElementById("rt-math-c"),cc=document.getElementById("rt-ct-c");
-    if(mc)mc.style.display=tab==="math"?"block":"none";
-    if(cc)cc.style.display=tab==="ct"?"block":"none";
-  };
-  render();
-}
 
 // ── ADMIN PANEL ───────────────────────────────────────────────
 var adminCtx={tab:"mock",editTestId:null,editQ:null,editSubj:"math",editTopicId:null,editTopicSubj:"math"};
