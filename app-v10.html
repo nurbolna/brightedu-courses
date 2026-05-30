@@ -1147,8 +1147,7 @@ function renderHdrAuth(){
     '<button class="notif-bell" onclick="toggleNotifDropdown()" id="notif-btn">🔔</button>'+
     '<div id="notif-badge-el" style="display:none" class="notif-badge">0</div>'+
     '</div>'+
-    (isAdmin?'<button onclick="renderAdmin()" style="padding:6px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:12px;cursor:pointer;margin-left:6px">⚙️ Admin</button>':'')+
-    '<button onclick="'+(isAdmin?"renderAdmin()":"showPage('dashboard')")+'" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer;margin-left:6px">'+user.name.split(" ")[0]+'</button>';
+    '<button onclick="'+(isAdmin?"renderAdmin()":"showPage('dashboard')")+'" style="padding:6px 14px;border-radius:8px;border:'+(isAdmin?"none;background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff":"1px solid var(--border);background:var(--bg2);color:var(--text)")+';font-family:Inter,sans-serif;font-weight:'+(isAdmin?"700":"600")+';font-size:13px;cursor:pointer;margin-left:6px">'+(isAdmin?"⚙️ ":"")+user.name.split(" ")[0]+'</button>';
     // Notifications жүктеу
     loadNotifications();
   } else {
@@ -2616,61 +2615,13 @@ async function renderRating(){
 var adminCtx={tab:"mock",editTestId:null,editQ:null,editSubj:"math",editTopicId:null,editTopicSubj:"math"};
 
 // Admin login state
-var adminAuth={loggedIn:sessionStorage.getItem("be_admin_auth")==="1"};
-var ADMIN_PASS="bright2025admin"; // Өзгертуге болады
 
 async function renderAdmin(){
   if(!user||user.role!=="admin"){renderDashboard();return;}
-  if(!adminAuth.loggedIn){renderAdminLogin();return;}
   showPage("admin");
   renderAdminShell();
-  adminShowTab("mock");
+  adminShowTab("ss-topics");
 }
-
-function renderAdminLogin(){
-  var el=document.getElementById("pg-admin-login");
-  showPage("admin-login");
-  el.innerHTML=
-  '<div style="min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:24px">'+
-  '<div style="width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:36px 32px;box-shadow:var(--sh)">'+
-  '<div style="text-align:center;margin-bottom:28px">'+
-  '<div style="width:56px;height:56px;background:linear-gradient(135deg,#7C3AED,#4C1D95);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;box-shadow:0 4px 14px rgba(124,58,237,.35)">⚙️</div>'+
-  '<div style="font-family:Syne,sans-serif;font-size:22px;font-weight:800;margin-bottom:4px">Admin панель</div>'+
-  '<div style="font-size:13px;color:var(--text2)">Кіру үшін пароль енгізіңіз</div>'+
-  '</div>'+
-  '<div style="margin-bottom:14px">'+
-  '<label style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.3px">Пароль</label>'+
-  '<div style="position:relative">'+
-  '<input type="password" id="admin-pass-input" placeholder="••••••••••••"'+
-  ' style="width:100%;padding:12px 14px 12px 42px;background:var(--bg2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:Inter,sans-serif;outline:none"'+
-  ' onkeydown="if(event.key==String.fromCharCode(13)){checkAdminPass();}"/>'+
-  '<span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔑</span>'+
-  '</div>'+
-  '</div>'+
-  '<div id="admin-login-err" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:9px;padding:9px 12px;margin-bottom:13px;font-size:13px;color:var(--red);display:none">❌ Пароль қате</div>'+
-  '<button onclick="checkAdminPass()" style="width:100%;padding:13px;border-radius:11px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-weight:700;font-size:15px;background:linear-gradient(135deg,#7C3AED,#4C1D95);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.3)">Кіру →</button>'+
-  '<div style="text-align:center;margin-top:14px">'+
-  '<button onclick="renderDashboard()" style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--text2);font-family:Inter,sans-serif">← Артқа</button>'+
-  '</div>'+
-  '</div></div>';
-  setTimeout(function(){var inp=document.getElementById("admin-pass-input");if(inp)inp.focus();},100);
-}
-window.checkAdminPass=function(){
-  var inp=document.getElementById("admin-pass-input");
-  var err=document.getElementById("admin-login-err");
-  if(!inp)return;
-  if(inp.value===ADMIN_PASS){
-    adminAuth.loggedIn=true;
-    sessionStorage.setItem("be_admin_auth","1");
-    showPage("admin");
-    renderAdminShell();
-    adminShowTab("mock");
-  }else{
-    if(err)err.style.display="block";
-    inp.value="";inp.focus();
-    setTimeout(function(){if(err)err.style.display="none";},3000);
-  }
-};
 
 function renderAdminShell(){
   var el=document.getElementById("pg-admin");
@@ -2688,7 +2639,7 @@ function renderAdminShell(){
   '<div class="admin-sidebar-title">Жүйе</div>'+
   '<button class="admin-nav-btn" id="anav-users" onclick="adminShowTab(\'users\')">👥 Оқушылар</button>'+
   '<div style="margin-top:auto;padding-top:20px">'+
-  '<button onclick="adminAuth.loggedIn=false;sessionStorage.removeItem(\'be_admin_auth\');renderDashboard()" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:12px;cursor:pointer">← Шығу</button>'+
+  '<button onclick="renderDashboard()"width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:12px;cursor:pointer">← Шығу</button>'+
   '</div>'+
   '</div>'+
   '<div class="admin-content" id="admin-content"></div>'+
@@ -3417,6 +3368,8 @@ function buildSSQForm(wrapId,listId,type,qData){
   while(opts.length<4)opts.push("");
   adminCtx.correctIdx=qData?qData.correct_index:0;
   adminCtx.editQId=qData?qData.id:null;
+  adminCtx.ssImgUrl=qData?qData.image_url||"":"";
+  var LETTERS="ABCDEFGH";
 
   wrap.innerHTML=
   '<div class="adm-form" style="margin-bottom:20px;border:2px solid var(--blue)">'+
@@ -3424,27 +3377,51 @@ function buildSSQForm(wrapId,listId,type,qData){
   '<div style="font-weight:700;font-size:15px">'+(qData?"Сұрақты өзгерту":"Жаңа сұрақ қосу")+'</div>'+
   '<button onclick="document.getElementById(\''+wrapId+'\').innerHTML=\'\'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text2)">×</button>'+
   '</div>'+
+  // Text KZ
   '<div class="adm-field"><label class="adm-label">Сұрақ (Қаз)</label>'+
   '<textarea class="adm-textarea" id="sqf-kz" placeholder="Сұрақты қазақша жазыңыз...">'+escHtml(qData?qData.text_kz||"":"")+'</textarea></div>'+
+  // Text RU
   '<div class="adm-field"><label class="adm-label">Сұрақ (Рус)</label>'+
   '<textarea class="adm-textarea" id="sqf-ru" placeholder="Вопрос на русском...">'+escHtml(qData?qData.text_ru||"":"")+'</textarea></div>'+
+  // Image upload — mock testtегідей
+  '<div class="adm-field"><label class="adm-label">Сурет (міндетті емес)</label>'+
+  '<div class="img-upload-area" id="ss-img-upload-area">'+
+  '<input type="file" accept="image/*" id="sqf-image" onchange="previewSSImage(event)"/>'+
+  '<div id="ss-img-upload-placeholder"'+(adminCtx.ssImgUrl?' style="display:none"':'')+'>'+
+  '<div style="font-size:28px;margin-bottom:6px">🖼</div>'+
+  '<div style="font-size:13px;color:var(--text2)">Суретті жүктеу үшін басыңыз</div>'+
+  '<div style="font-size:11px;color:var(--text2);margin-top:3px">JPG, PNG · макс 2MB</div>'+
+  '</div>'+
+  '<img id="ss-img-preview" class="img-preview" style="display:'+(adminCtx.ssImgUrl?"block":"none")+'" src="'+(adminCtx.ssImgUrl||"")+'"/>'+
+  '</div>'+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-img-url" value="'+escHtml(adminCtx.ssImgUrl)+'" placeholder="немесе сурет URL-ін қойыңыз" style="flex:1" oninput="syncSSImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearSSImage()" style="padding:8px 12px;font-size:12px">🗑 Өшіру</button>'+
+  '</div></div>'+
+  // Options
   '<div class="adm-field">'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-  '<label class="adm-label" style="margin-bottom:0">Жауап нұсқалары (✓ — дұрыс)</label>'+
-  '</div>'+
+  '<label class="adm-label" style="margin-bottom:0">Жауап нұсқалары <span style="font-weight:400;text-transform:none;font-size:11px">(✓ — дұрыс жауап)</span></label>'+
+  '<div style="display:flex;gap:6px">'+
+  '<button onclick="addSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer">+ Қосу</button>'+
+  '<button onclick="removeSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#EF4444;font-size:12px;font-weight:700;cursor:pointer">− Өшіру</button>'+
+  '</div></div>'+
   '<div id="sqf-opts">'+
   opts.map(function(opt,i){
     return'<div class="opt-editor" id="sopt-row-'+i+'">'+
-    '<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+"ABCD"[i]+'</span>'+
+    '<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[i]+'</span>'+
     '<input type="text" value="'+escHtml(opt)+'" placeholder="Нұсқа '+(i+1)+'"/>'+
     '<button class="opt-correct-btn'+(i===(qData?qData.correct_index:0)?" correct":"")+'" id="sopt-correct-'+i+'" onclick="setSCorrectOpt('+i+')" title="Дұрыс жауап">✓</button>'+
     '</div>';
   }).join("")+
   '</div></div>'+
+  // Explanation (HW only)
   (isHw?
-  '<div class="adm-field"><label class="adm-label">Түсіндірме (explanation) — міндетті емес</label>'+
+  '<div class="adm-field"><label class="adm-label">Түсіндірме — міндетті емес</label>'+
   '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>':"")+ 
-  '<div class="adm-field"><label class="adm-label">Реті</label><input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
+  // Order
+  '<div class="adm-field"><label class="adm-label">Реті</label>'+
+  '<input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
   '<div style="display:flex;gap:10px;margin-top:4px">'+
   '<button class="adm-btn adm-btn-primary" onclick="saveSSQ(\''+wrapId+'\',\''+listId+'\',\''+type+'\')">💾 Сақтау</button>'+
   '<button class="adm-btn adm-btn-ghost" onclick="document.getElementById(\''+wrapId+'\').innerHTML=\'\'">Болдырмау</button>'+
@@ -3461,6 +3438,69 @@ window.setSCorrectOpt=function(idx){
     var btn=document.getElementById("sopt-correct-"+i);
     if(btn)btn.className="opt-correct-btn"+(i===idx?" correct":"");
   }
+};
+
+window.addSSOptRow=function(){
+  var container=document.getElementById("sqf-opts");
+  if(!container)return;
+  var rows=container.querySelectorAll(".opt-editor");
+  var idx=rows.length;
+  if(idx>=8){toast(lang==="kz"?"Максимум 8 нұсқа":"Максимум 8 вариантов","#F59E0B");return;}
+  var LETTERS="ABCDEFGH";
+  var div=document.createElement("div");
+  div.className="opt-editor";div.id="sopt-row-"+idx;
+  div.innerHTML='<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[idx]+'</span>'+
+  '<input type="text" placeholder="Нұсқа '+(idx+1)+'"/>'+
+  '<button class="opt-correct-btn" id="sopt-correct-'+idx+'" onclick="setSCorrectOpt('+idx+')" title="Дұрыс жауап">✓</button>';
+  container.appendChild(div);
+};
+
+window.removeSSOptRow=function(){
+  var container=document.getElementById("sqf-opts");
+  if(!container)return;
+  var rows=container.querySelectorAll(".opt-editor");
+  if(rows.length<=2){toast(lang==="kz"?"Минимум 2 нұсқа керек":"Минимум 2 варианта","#F59E0B");return;}
+  rows[rows.length-1].remove();
+  if(adminCtx.correctIdx>=rows.length-1){adminCtx.correctIdx=0;setSCorrectOpt(0);}
+};
+
+window.previewSSImage=function(e){
+  var file=e.target.files[0];if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=document.getElementById("ss-img-preview");
+    var placeholder=document.getElementById("ss-img-upload-placeholder");
+    var urlInput=document.getElementById("sqf-img-url");
+    if(img){img.src=ev.target.result;img.style.display="block";}
+    if(placeholder)placeholder.style.display="none";
+    adminCtx.ssImgUrl="__file__";
+  };
+  reader.readAsDataURL(file);
+};
+
+window.syncSSImgUrl=function(val){
+  adminCtx.ssImgUrl=val;
+  var img=document.getElementById("ss-img-preview");
+  var placeholder=document.getElementById("ss-img-upload-placeholder");
+  if(val){
+    if(img){img.src=val;img.style.display="block";}
+    if(placeholder)placeholder.style.display="none";
+  }else{
+    if(img){img.src="";img.style.display="none";}
+    if(placeholder)placeholder.style.display="block";
+  }
+};
+
+window.clearSSImage=function(){
+  var img=document.getElementById("ss-img-preview");
+  var placeholder=document.getElementById("ss-img-upload-placeholder");
+  var urlInput=document.getElementById("sqf-img-url");
+  var fileInput=document.getElementById("sqf-image");
+  adminCtx.ssImgUrl="";
+  if(img){img.src="";img.style.display="none";}
+  if(placeholder)placeholder.style.display="block";
+  if(urlInput)urlInput.value="";
+  if(fileInput)fileInput.value="";
 };
 
 window.adminOpenHwForm=function(qId){
@@ -3490,7 +3530,19 @@ window.saveSSQ=async function(wrapId,listId,type){
   if(filled.length<2){msg.textContent="⚠️ Кем дегенде 2 нұсқа керек";msg.style.color="#EF4444";msg.style.display="block";return;}
   var order=parseInt((document.getElementById("sqf-order")||{}).value)||1;
   var expl=(document.getElementById("sqf-expl")||{}).value||"";
-  
+  var imgUrl=(document.getElementById("sqf-img-url")||{}).value||"";
+
+  // Image upload if file selected
+  var fileInput=document.getElementById("sqf-image");
+  if(fileInput&&fileInput.files&&fileInput.files[0]){
+    msg.textContent="🖼 Сурет жүктелуде...";msg.style.color="var(--text2)";msg.style.display="block";
+    try{
+      imgUrl=await db.uploadImage(fileInput.files[0],"ss/"+adminCtx.editTopicId+"/"+Date.now());
+    }catch(e){
+      msg.textContent="❌ Сурет жүктелмеді: "+e.message;msg.style.color="#EF4444";return;
+    }
+  }
+
   var qData={
     topic_id:adminCtx.editTopicId,
     text_kz:kz.trim(),
@@ -3498,6 +3550,7 @@ window.saveSSQ=async function(wrapId,listId,type){
     options:JSON.stringify(filled),
     correct_index:adminCtx.correctIdx||0,
     order_num:order,
+    image_url:imgUrl,
     difficulty:"medium"
   };
   if(type==="hw")qData.explanation=expl.trim();
