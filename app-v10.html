@@ -2616,7 +2616,7 @@ async function renderRating(){
 var adminCtx={tab:"mock",editTestId:null,editQ:null,editSubj:"math",editTopicId:null,editTopicSubj:"math"};
 
 // Admin login state
-var adminAuth={loggedIn:false};
+var adminAuth={loggedIn:sessionStorage.getItem("be_admin_auth")==="1"};
 var ADMIN_PASS="bright2025admin"; // Өзгертуге болады
 
 async function renderAdmin(){
@@ -2661,6 +2661,7 @@ window.checkAdminPass=function(){
   if(!inp)return;
   if(inp.value===ADMIN_PASS){
     adminAuth.loggedIn=true;
+    sessionStorage.setItem("be_admin_auth","1");
     showPage("admin");
     renderAdminShell();
     adminShowTab("mock");
@@ -2675,19 +2676,21 @@ function renderAdminShell(){
   var el=document.getElementById("pg-admin");
   el.innerHTML=
   '<div class="admin-layout">'+
-  // Sidebar
   '<div class="admin-sidebar">'+
   '<div style="font-family:Syne,sans-serif;font-weight:800;font-size:15px;padding:4px 8px;margin-bottom:12px;color:var(--text)">⚙️ Admin</div>'+
+  '<div class="admin-sidebar-title">Self Study</div>'+
+  '<button class="admin-nav-btn" id="anav-ss-topics" onclick="adminShowTab(\'ss-topics\')">📚 Тақырыптар</button>'+
+  '<button class="admin-nav-btn" id="anav-ss-hw" onclick="adminShowTab(\'ss-hw\')" style="'+(adminCtx.editTopicId?"":"opacity:.4;cursor:not-allowed")+'" '+(adminCtx.editTopicId?"":"disabled")+'>📋 Үй жұмысы</button>'+
+  '<button class="admin-nav-btn" id="anav-ss-test" onclick="adminShowTab(\'ss-test\')" style="'+(adminCtx.editTopicId?"":"opacity:.4;cursor:not-allowed")+'" '+(adminCtx.editTopicId?"":"disabled")+'>📝 Тест сұрақтары</button>'+
   '<div class="admin-sidebar-title">Mock Tests</div>'+
   '<button class="admin-nav-btn active" id="anav-mock" onclick="adminShowTab(\'mock\')">📝 Тесттер тізімі</button>'+
   '<button class="admin-nav-btn" id="anav-questions" onclick="adminShowTab(\'questions\')" style="'+(adminCtx.editTestId?"":"opacity:.4;cursor:not-allowed")+'" '+(adminCtx.editTestId?"":"disabled")+'>📋 Сұрақтар</button>'+
   '<div class="admin-sidebar-title">Жүйе</div>'+
   '<button class="admin-nav-btn" id="anav-users" onclick="adminShowTab(\'users\')">👥 Оқушылар</button>'+
   '<div style="margin-top:auto;padding-top:20px">'+
-  '<button onclick="doLogout()" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:12px;cursor:pointer">← Шығу</button>'+
+  '<button onclick="adminAuth.loggedIn=false;sessionStorage.removeItem(\'be_admin_auth\');renderDashboard()" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:12px;cursor:pointer">← Шығу</button>'+
   '</div>'+
   '</div>'+
-  // Content area
   '<div class="admin-content" id="admin-content"></div>'+
   '</div>';
 }
