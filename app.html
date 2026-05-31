@@ -1821,65 +1821,19 @@ async function renderCourseSelect(){
 }
 function buildCCard(subj,ico,label,desc,total,done,topics,pm,bg){
   var pct=total>0?Math.round(done/total*100):0;
-  var data="data-subj='"+subj+"'";
-  return'<div class="ccard" style="background:'+bg+'" onclick="selectCourse(\''+subj+'\')">'+
-  '<div style="font-size:28px;margin-bottom:6px">🖼</div>'+
-  '<div style="font-size:13px;color:var(--text2)">Суретті жүктеу үшін басыңыз</div>'+
-  '<div style="font-size:11px;color:var(--text2);margin-top:3px">JPG, PNG · макс 2MB</div>'+
+  return'<div class="ccard" style="background:'+bg+';border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform .15s" onclick="selectCourse(''+subj+'')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">'+
+  '<div style="font-size:36px;margin-bottom:8px">'+ico+'</div>'+
+  '<div style="font-weight:700;font-size:17px;color:#fff;margin-bottom:4px">'+label+'</div>'+
+  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:14px">'+desc+'</div>'+
+  '<div style="background:rgba(255,255,255,.2);border-radius:8px;height:6px;margin-bottom:8px">'+
+  '<div style="background:#fff;height:100%;border-radius:8px;width:'+pct+'%;transition:width .4s"></div>'+
   '</div>'+
-  '<img id="ss-img-preview" class="img-preview" style="display:'+(adminCtx.ssImgUrl?"block":"none")+'" src="'+(adminCtx.ssImgUrl||"")+'"/>'+
+  '<div style="display:flex;justify-content:space-between;align-items:center">'+
+  '<span style="font-size:12px;color:rgba(255,255,255,.85);font-weight:600">'+done+' / '+total+' тақырып</span>'+
+  '<span style="font-size:12px;font-weight:700;color:#fff">'+pct+'%</span>'+
   '</div>'+
-  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
-  '<input class="adm-input" id="sqf-img-url" value="'+escHtml(adminCtx.ssImgUrl)+'" placeholder="немесе сурет URL-ін қойыңыз" style="flex:1" oninput="syncSSImgUrl(this.value)"/>'+
-  '<button class="adm-btn adm-btn-ghost" onclick="clearSSImage()" style="padding:8px 12px;font-size:12px">🗑 Өшіру</button>'+
-  '</div></div>'+
-  // Options
-  '<div class="adm-field">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
-  '<label class="adm-label" style="margin-bottom:0">Жауап нұсқалары <span style="font-weight:400;text-transform:none;font-size:11px">(✓ — дұрыс жауап)</span></label>'+
-  '<div style="display:flex;gap:6px">'+
-  '<button onclick="addSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer">+ Қосу</button>'+
-  '<button onclick="removeSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#EF4444;font-size:12px;font-weight:700;cursor:pointer">− Өшіру</button>'+
-  '</div></div>'+
-  '<div id="sqf-opts">'+
-  opts.map(function(opt,i){
-    return'<div class="opt-editor" id="sopt-row-'+i+'">'+
-    '<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[i]+'</span>'+
-    '<input type="text" value="'+escHtml(opt)+'" placeholder="Нұсқа '+(i+1)+'"/>'+
-    '<button class="opt-correct-btn'+(i===(qData?qData.correct_index:0)?" correct":"")+'" id="sopt-correct-'+i+'" onclick="setSCorrectOpt('+i+')" title="Дұрыс жауап">✓</button>'+
-    '</div>';
-  }).join("")+
-  '</div></div>'+
-  // Explanation (HW only)
-  (isHw?
-  '<div class="adm-field"><label class="adm-label">Түсіндірме — міндетті емес</label>'+
-  '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>'+
-  '<div class="adm-field"><label class="adm-label">Түсіндірмеге сурет — міндетті емес</label>'+
-  '<div class="img-upload-area" id="ss-expl-img-area">'+
-  '<input type="file" accept="image/*" id="sqf-expl-image" onchange="previewExplImage(event)"/>'+
-  '<div id="ss-expl-img-placeholder"'+(qData&&qData.explanation_image_url?' style="display:none"':'')+'>'+
-  '<div style="font-size:24px;margin-bottom:4px">🖼</div>'+
-  '<div style="font-size:12px;color:var(--text2)">Түсіндірмеге сурет жүктеу</div>'+
-  '</div>'+
-  '<img id="ss-expl-img-preview" class="img-preview" style="display:'+(qData&&qData.explanation_image_url?"block":"none")+'" src="'+(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'"/>'+
-  '</div>'+
-  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
-  '<input class="adm-input" id="sqf-expl-img-url" value="'+escHtml(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'" placeholder="немесе URL қойыңыз" style="flex:1" oninput="syncExplImgUrl(this.value)"/>'+
-  '<button class="adm-btn adm-btn-ghost" onclick="clearExplImage()" style="padding:8px 12px;font-size:12px">🗑</button>'+
-  '</div></div>':"")+ 
-  // Order
-  '<div class="adm-field"><label class="adm-label">Реті</label>'+
-  '<input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
-  '<div style="display:flex;gap:10px;margin-top:4px">'+
-  '<button class="adm-btn adm-btn-primary" onclick="saveSSQ(\''+wrapId+'\',\''+listId+'\',\''+type+'\')">💾 Сақтау</button>'+
-  '<button class="adm-btn adm-btn-ghost" onclick="document.getElementById(\''+wrapId+'\').innerHTML=\'\'">Болдырмау</button>'+
-  '</div>'+
-  '<div id="sqf-msg" style="margin-top:10px;font-size:13px;display:none"></div>'+
   '</div>';
-
-  wrap.scrollIntoView({behavior:"smooth"});
 }
-
 
 // ── TOPIC LIST ────────────────────────────────────────────────
 function selectCourse(subj){
@@ -2548,6 +2502,186 @@ window.goTopic=async function(topicId){
   renderTopicPageNew();
 };
 
+
+async function startMock(testIdOrSubj,mode,subj){
+  // Егер testId берілсе — сол тест, берілмесе — пән бойынша тізімнен таңдайды
+  if(!user){renderLogin();return;}
+  mode=mode||"timer";
+  var subject=subj||testIdOrSubj;
+  var questions=[];
+  var testId=null;
+
+  // testIdOrSubj — UUID болса test бойынша, болмаса пән бойынша
+  var isUuid=/^[0-9a-f-]{36}$/i.test(testIdOrSubj);
+  if(isUuid){
+    testId=testIdOrSubj;
+    questions=await db.getMockQsByTest(testId);
+  } else {
+    // Пән бойынша барлық сұрақтарды аламыз
+    questions=await db.getMockQs(subject);
+  }
+
+  if(!questions||questions.length===0){
+    alert(lang==="kz"?"Тест сұрақтары жоқ. Кейінірек қайталаңыз.":"Вопросы теста отсутствуют. Попробуйте позже.");
+    return;
+  }
+
+  // Shuffle
+  var qs=questions.slice().sort(function(){return Math.random()-.5;});
+  ctx.mockResult=null;
+  qState={
+    type:"mock",subject:subject,testId:testId,
+    qs:qs,cur:0,answers:{},mode:mode,
+    time:mode==="timer"?5400:null,timer:null
+  };
+  renderMockQuiz();
+}
+
+function renderMockQuiz(){
+  var el=document.getElementById("pg-mock");
+  showPage("mock");
+  renderMockQuestion();
+  if(qState.mode==="timer"){
+    qState.timer=setInterval(function(){
+      qState.time--;
+      var tEl=document.getElementById("mock-timer");
+      if(tEl){
+        var m=Math.floor(qState.time/60),s=qState.time%60;
+        tEl.textContent=(m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+        if(qState.time<=300)tEl.style.color="#EF4444";
+      }
+      if(qState.time<=0){clearInterval(qState.timer);submitMock();}
+    },1000);
+  }
+}
+
+function renderMockQuestion(){
+  var el=document.getElementById("pg-mock");
+  var q=qState.qs[qState.cur];
+  var total=qState.qs.length;
+  var answered=Object.keys(qState.answers).length;
+  var m=Math.floor((qState.time||0)/60),s=(qState.time||0)%60;
+
+  el.innerHTML=
+  '<div class="app-hdr" style="gap:8px">'+
+  '<button class="back-btn" onclick="if(confirm(\'Тестен шығасыз ба?\')){{clearInterval(qState.timer);renderMockSelect();}}">←</button>'+
+  '<div style="flex:1;min-width:0">'+
+  '<div style="font-weight:700;font-size:14px;color:var(--text)">📊 Mock Test — '+(lang==="kz"?qState.subject==="math"?"Математика":"Critical Thinking":qState.subject==="math"?"Математика":"Critical Thinking")+'</div>'+
+  '<div style="font-size:12px;color:var(--text2)">'+(qState.cur+1)+' / '+total+' сұрақ • '+answered+' жауапталды</div>'+
+  '</div>'+
+  (qState.mode==="timer"?'<div id="mock-timer" style="font-weight:700;font-size:15px;color:var(--text);font-variant-numeric:tabular-nums">'+(m<10?"0":"")+m+":"+(s<10?"0":"")+s+'</div>':'')+
+  '</div>'+
+  // Progress
+  '<div style="height:4px;background:var(--border);margin:0 0 20px"><div style="height:100%;background:var(--blue);width:'+(Math.round((qState.cur+1)/total*100))+'%;transition:width .3s"></div></div>'+
+  // Question
+  '<div style="max-width:720px;margin:0 auto;padding:0 16px 80px">'+
+  '<div style="background:var(--bg2);border-radius:14px;padding:20px;margin-bottom:16px;font-size:15px;font-weight:600;line-height:1.55;color:var(--text)">'+
+  (q.image_url?'<img src="'+q.image_url+'" style="width:100%;border-radius:8px;margin-bottom:12px"/>':'')+
+  q.text+
+  '</div>'+
+  // Options
+  '<div style="display:flex;flex-direction:column;gap:10px">'+
+  (q.options||[]).map(function(opt,i){
+    var sel=qState.answers[qState.cur]===i;
+    return'<button onclick="selectMockAns('+i+')" style="text-align:left;padding:14px 16px;border-radius:12px;border:2px solid '+(sel?"var(--blue)":"var(--border)")+';background:'+(sel?"rgba(37,99,235,.1)":"var(--bg2)")+';color:var(--text);font-family:Inter,sans-serif;font-size:14px;font-weight:'+(sel?"700":"500")+';cursor:pointer;transition:all .15s">'+
+    '<span style="font-weight:700;margin-right:8px;color:'+(sel?"var(--blue)":"var(--text2)")+'">'+["A","B","C","D","E"][i]+'.</span>'+opt+
+    '</button>';
+  }).join("")+
+  '</div>'+
+  // Nav buttons
+  '<div style="display:flex;gap:10px;margin-top:20px">'+
+  (qState.cur>0?'<button onclick="mockNav(-1)" style="flex:1;padding:13px;border-radius:11px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-family:Inter,sans-serif;font-weight:600;font-size:14px;cursor:pointer">← '+(lang==="kz"?"Алдыңғы":"Назад")+'</button>':'')+
+  (qState.cur<total-1?
+    '<button onclick="mockNav(1)" style="flex:1;padding:13px;border-radius:11px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+(lang==="kz"?"Келесі":"Далее")+' →</button>':
+    '<button onclick="submitMock()" style="flex:1;padding:13px;border-radius:11px;border:none;background:#16A34A;color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">✅ '+(lang==="kz"?"Аяқтау":"Завершить")+'</button>'
+  )+
+  '</div>'+
+  '</div>';
+}
+
+function selectMockAns(i){
+  qState.answers[qState.cur]=i;
+  renderMockQuestion();
+}
+function mockNav(dir){
+  qState.cur+=dir;
+  renderMockQuestion();
+}
+async function submitMock(){
+  clearInterval(qState.timer);
+  var score=0;
+  qState.qs.forEach(function(q,i){
+    if(qState.answers[i]===q.correct_index)score++;
+  });
+  var timeTaken=qState.mode==="timer"?5400-qState.time:0;
+  ctx.mockResult={
+    score:score,total:qState.qs.length,
+    answers:qState.answers,qs:qState.qs,
+    subject:qState.subject,testId:qState.testId,
+    mode:qState.mode,time:timeTaken
+  };
+  if(user){
+    await db.saveResult(user.id,user.name,qState.subject,"mock",score,qState.qs.length,qState.mode,timeTaken);
+    if(ctx.activeChallenge&&ctx.activeChallenge.id){
+      // Challenge автоматты аяқтау
+      ctx.activeChallenge=null;
+    }
+  }
+  renderMockResult();
+}
+
+async function renderMockSelect(){
+  if(!user){renderLogin();return;}
+  var el=document.getElementById("pg-mock-select");
+  showPage("mock-select");
+  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
+  '<div><div class="app-title">📊 '+(lang==="kz"?"Mock Test":"Mock Test")+'</div><div class="app-sub">'+(lang==="kz"?"Пән таңдаңыз":"Выберите предмет")+'</div></div></div>'+
+  '<div class="loading"><span class="spin" style="font-size:22px">⏳</span></div>';
+
+  var[mathQs,ctQs,myRes]=await Promise.all([
+    db.getMockQs("math"),
+    db.getMockQs("ct"),
+    db.getMyResults(user.id)
+  ]);
+  var mockRes=myRes.filter(function(r){return r.type==="mock";});
+  var mathBest=0,ctBest=0;
+  mockRes.forEach(function(r){
+    var pct=Math.round(r.score/r.total*100);
+    if(r.subject==="math"&&pct>mathBest)mathBest=pct;
+    if(r.subject==="ct"&&pct>ctBest)ctBest=pct;
+  });
+
+  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
+  '<div><div class="app-title">📊 Mock Test</div><div class="app-sub">'+(lang==="kz"?"Пән таңдаңыз":"Выберите предмет")+'</div></div></div>'+
+  '<div style="max-width:640px;margin:0 auto;padding:20px 16px;display:flex;flex-direction:column;gap:16px">'+
+
+  // Math card
+  '<div style="background:linear-gradient(135deg,#1E40AF,#2563EB);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(37,99,235,.3);transition:transform .15s" onclick="startMock('math')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">'+
+  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+  '<div>'+
+  '<div style="font-size:32px;margin-bottom:8px">📐</div>'+
+  '<div style="font-weight:700;font-size:18px;color:#fff;margin-bottom:4px">'+(lang==="kz"?"Математика":"Математика")+'</div>'+
+  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+(lang==="kz"?mathQs.length+" сұрақ • 90 мин":mathQs.length+" вопросов • 90 мин")+'</div>'+
+  '</div>'+
+  (mathBest>0?'<div style="background:rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;text-align:center"><div style="font-size:11px;color:rgba(255,255,255,.75)">'+(lang==="kz"?"Үздік нәтиже":"Лучший результат")+'</div><div style="font-size:20px;font-weight:700;color:#fff">'+mathBest+'%</div></div>':'')+
+  '</div>'+
+  '<div style="background:rgba(255,255,255,.2);border-radius:10px;padding:10px 18px;display:inline-block;font-weight:700;color:#fff;font-size:14px">'+(lang==="kz"?"Бастау →":"Начать →")+'</div>'+
+  '</div>'+
+
+  // CT card
+  '<div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(124,58,237,.3);transition:transform .15s" onclick="startMock('ct')" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">'+
+  '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+  '<div>'+
+  '<div style="font-size:32px;margin-bottom:8px">🧠</div>'+
+  '<div style="font-weight:700;font-size:18px;color:#fff;margin-bottom:4px">Critical Thinking</div>'+
+  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+(lang==="kz"?ctQs.length+" сұрақ • 90 мин":ctQs.length+" вопросов • 90 мин")+'</div>'+
+  '</div>'+
+  (ctBest>0?'<div style="background:rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;text-align:center"><div style="font-size:11px;color:rgba(255,255,255,.75)">'+(lang==="kz"?"Үздік нәтиже":"Лучший результат")+'</div><div style="font-size:20px;font-weight:700;color:#fff">'+ctBest+'%</div></div>':'')+
+  '</div>'+
+  '<div style="background:rgba(255,255,255,.2);border-radius:10px;padding:10px 18px;display:inline-block;font-weight:700;color:#fff;font-size:14px">'+(lang==="kz"?"Бастау →":"Начать →")+'</div>'+
+  '</div>'+
+  '</div>';
+}
 
 function renderMockResult(){
   var r=ctx.mockResult;
