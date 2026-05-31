@@ -1821,7 +1821,8 @@ async function renderCourseSelect(){
 }
 function buildCCard(subj,ico,label,desc,total,done,topics,pm,bg){
   var pct=total>0?Math.round(done/total*100):0;
-  return'<div class="ccard" style="background:'+bg+';border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform .15s" onclick="selectCourse(\''+subj+'\')" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'translateY(0)\'">'+
+  var id="ccard-"+subj;
+  var html='<div id="'+id+'" class="ccard" style="background:'+bg+';border-radius:18px;padding:20px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:transform .15s">'+
   '<div style="font-size:36px;margin-bottom:8px">'+ico+'</div>'+
   '<div style="font-weight:700;font-size:17px;color:#fff;margin-bottom:4px">'+label+'</div>'+
   '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:14px">'+desc+'</div>'+
@@ -1833,6 +1834,15 @@ function buildCCard(subj,ico,label,desc,total,done,topics,pm,bg){
   '<span style="font-size:12px;font-weight:700;color:#fff">'+pct+'%</span>'+
   '</div>'+
   '</div>';
+  setTimeout(function(){
+    var el=document.getElementById(id);
+    if(el){
+      el.addEventListener('click',function(){selectCourse(subj);});
+      el.addEventListener('mouseover',function(){el.style.transform='translateY(-2px)';});
+      el.addEventListener('mouseout',function(){el.style.transform='translateY(0)';});
+    }
+  },0);
+  return html;
 }
 
 // ── TOPIC LIST ────────────────────────────────────────────────
@@ -1859,8 +1869,8 @@ function renderTopicList(){
     var icoStyle=done?"background:rgba(22,163,74,.12)":unlocked?"background:rgba(37,99,235,.1)":"background:var(--bg2)";
     var ico=done?"✅":unlocked?"📖":"🔒";
     var cls="topic-item"+(done?" done":"")+(!unlocked?" locked":"");
-    var onclick=unlocked?"onclick=\"goTopic('"+tp.id+"')\"":"";
-    html+='<div class="'+cls+'" '+onclick+'>'+
+    var dataId=unlocked?'data-tid="'+tp.id+'"':'';
+    html+='<div class="'+cls+'" '+dataId+'>'+
     '<div class="t-ico" style="'+icoStyle+'">'+ico+'</div>'+
     '<div class="t-info">'+
     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:3px">'+
@@ -1875,6 +1885,11 @@ function renderTopicList(){
   });
   html+='</div></div>';
   el.innerHTML=html;
+  // Event delegation for topic items (avoids inline onclick quote issues)
+  el.addEventListener("click",function(e){
+    var item=e.target.closest("[data-tid]");
+    if(item){goTopic(item.getAttribute("data-tid"));}
+  });
 }
 
 
@@ -2635,13 +2650,11 @@ async function renderMockSelect(){
   var el=document.getElementById("pg-mock-select");
   showPage("mock-select");
   el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-  '<div><div class="app-title">📊 '+(lang==="kz"?"Mock Test":"Mock Test")+'</div><div class="app-sub">'+(lang==="kz"?"Пән таңдаңыз":"Выберите предмет")+'</div></div></div>'+
+  '<div><div class="app-title">📊 Mock Test</div><div class="app-sub">'+(lang==="kz"?"Пән таңдаңыз":"Выберите предмет")+'</div></div></div>'+
   '<div class="loading"><span class="spin" style="font-size:22px">⏳</span></div>';
 
   var[mathQs,ctQs,myRes]=await Promise.all([
-    db.getMockQs("math"),
-    db.getMockQs("ct"),
-    db.getMyResults(user.id)
+    db.getMockQs("math"),db.getMockQs("ct"),db.getMyResults(user.id)
   ]);
   var mockRes=myRes.filter(function(r){return r.type==="mock";});
   var mathBest=0,ctBest=0;
@@ -2651,36 +2664,46 @@ async function renderMockSelect(){
     if(r.subject==="ct"&&pct>ctBest)ctBest=pct;
   });
 
-  el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
+  el.innerHTML=
+  '<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
   '<div><div class="app-title">📊 Mock Test</div><div class="app-sub">'+(lang==="kz"?"Пән таңдаңыз":"Выберите предмет")+'</div></div></div>'+
   '<div style="max-width:640px;margin:0 auto;padding:20px 16px;display:flex;flex-direction:column;gap:16px">'+
-
-  // Math card
-  '<div style="background:linear-gradient(135deg,#1E40AF,#2563EB);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(37,99,235,.3);transition:transform .15s" onclick=\"startMock(\'math\')\" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">'+
+  '<div id="mock-card-math" style="background:linear-gradient(135deg,#1E40AF,#2563EB);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(37,99,235,.3);transition:transform .15s">'+
   '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
   '<div>'+
   '<div style="font-size:32px;margin-bottom:8px">📐</div>'+
   '<div style="font-weight:700;font-size:18px;color:#fff;margin-bottom:4px">'+(lang==="kz"?"Математика":"Математика")+'</div>'+
-  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+(lang==="kz"?mathQs.length+" сұрақ • 90 мин":mathQs.length+" вопросов • 90 мин")+'</div>'+
+  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+mathQs.length+(lang==="kz"?" сұрақ • 90 мин":" вопросов • 90 мин")+'</div>'+
   '</div>'+
   (mathBest>0?'<div style="background:rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;text-align:center"><div style="font-size:11px;color:rgba(255,255,255,.75)">'+(lang==="kz"?"Үздік нәтиже":"Лучший результат")+'</div><div style="font-size:20px;font-weight:700;color:#fff">'+mathBest+'%</div></div>':'')+
   '</div>'+
   '<div style="background:rgba(255,255,255,.2);border-radius:10px;padding:10px 18px;display:inline-block;font-weight:700;color:#fff;font-size:14px">'+(lang==="kz"?"Бастау →":"Начать →")+'</div>'+
   '</div>'+
-
-  // CT card
-  '<div style="background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(124,58,237,.3);transition:transform .15s" onclick=\"startMock(\'ct\')\" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">'+
+  '<div id="mock-card-ct" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);border-radius:18px;padding:22px;cursor:pointer;box-shadow:0 6px 20px rgba(124,58,237,.3);transition:transform .15s">'+
   '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
   '<div>'+
   '<div style="font-size:32px;margin-bottom:8px">🧠</div>'+
   '<div style="font-weight:700;font-size:18px;color:#fff;margin-bottom:4px">Critical Thinking</div>'+
-  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+(lang==="kz"?ctQs.length+" сұрақ • 90 мин":ctQs.length+" вопросов • 90 мин")+'</div>'+
+  '<div style="font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px">'+ctQs.length+(lang==="kz"?" сұрақ • 90 мин":" вопросов • 90 мин")+'</div>'+
   '</div>'+
   (ctBest>0?'<div style="background:rgba(255,255,255,.2);border-radius:12px;padding:8px 14px;text-align:center"><div style="font-size:11px;color:rgba(255,255,255,.75)">'+(lang==="kz"?"Үздік нәтиже":"Лучший результат")+'</div><div style="font-size:20px;font-weight:700;color:#fff">'+ctBest+'%</div></div>':'')+
   '</div>'+
   '<div style="background:rgba(255,255,255,.2);border-radius:10px;padding:10px 18px;display:inline-block;font-weight:700;color:#fff;font-size:14px">'+(lang==="kz"?"Бастау →":"Начать →")+'</div>'+
   '</div>'+
   '</div>';
+  
+  var mc=document.getElementById("mock-card-math");
+  var cc=document.getElementById("mock-card-ct");
+  if(mc){
+    mc.addEventListener("click",function(){startMock("math","timer","math");});
+    mc.addEventListener("mouseover",function(){mc.style.transform="translateY(-2px)";});
+    mc.addEventListener("mouseout",function(){mc.style.transform="translateY(0)";});
+  }
+  if(cc){
+    cc.addEventListener("click",function(){startMock("ct","timer","ct");});
+    cc.addEventListener("mouseover",function(){cc.style.transform="translateY(-2px)";});
+    cc.addEventListener("mouseout",function(){cc.style.transform="translateY(0)";});
+  }
 }
 
 function renderMockResult(){
