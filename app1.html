@@ -1821,23 +1821,63 @@ async function renderCourseSelect(){
 }
 function buildCCard(subj,ico,label,desc,total,done,topics,pm,bg){
   var pct=total>0?Math.round(done/total*100):0;
-  var lockedCount=topics.filter(function(tp){return !(pm[subj+"_"+tp.id]&&pm[subj+"_"+tp.id].passed);}).length;
-  return'<div class="ccard" style="background:'+bg+';cursor:pointer;border-radius:18px;padding:22px;box-shadow:0 6px 24px rgba(0,0,0,.18);transition:transform .15s;position:relative;overflow:hidden" onclick="selectCourse(\''+subj+'\')" onmouseover="this.style.transform=\'translateY(-3px)\'" onmouseout="this.style.transform=\'translateY(0)\'">'+
-  '<div style="position:absolute;top:-20px;right:-20px;font-size:80px;opacity:.08;pointer-events:none">'+ico+'</div>'+
-  '<div style="font-size:32px;margin-bottom:10px">'+ico+'</div>'+
-  '<div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;color:#fff;margin-bottom:4px">'+label+'</div>'+
-  '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-bottom:16px">'+desc+'</div>'+
-  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
-  '<div style="flex:1;height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden">'+
-  '<div style="height:100%;width:'+pct+'%;background:#fff;border-radius:3px;transition:width .4s"></div>'+
+  var data="data-subj='"+subj+"'";
+  return'<div class="ccard" style="background:'+bg+'" onclick="selectCourse(\''+subj+'\')">'+
+  '<div style="font-size:28px;margin-bottom:6px">🖼</div>'+
+  '<div style="font-size:13px;color:var(--text2)">Суретті жүктеу үшін басыңыз</div>'+
+  '<div style="font-size:11px;color:var(--text2);margin-top:3px">JPG, PNG · макс 2MB</div>'+
   '</div>'+
-  '<span style="font-size:12px;font-weight:700;color:#fff">'+pct+'%</span>'+
+  '<img id="ss-img-preview" class="img-preview" style="display:'+(adminCtx.ssImgUrl?"block":"none")+'" src="'+(adminCtx.ssImgUrl||"")+'"/>'+
   '</div>'+
-  '<div style="display:flex;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.8)">'+
-  '<span>\u2705 '+done+'/'+total+' '+(lang==="kz"?"\u04e9\u0442\u0442\u0456":"\u043f\u0440\u043e\u0439\u0434\u0435\u043d\u043e")+'</span>'+
-  (lockedCount>0?'<span>\uD83D\uDD12 '+lockedCount+'</span>':'')+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-img-url" value="'+escHtml(adminCtx.ssImgUrl)+'" placeholder="немесе сурет URL-ін қойыңыз" style="flex:1" oninput="syncSSImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearSSImage()" style="padding:8px 12px;font-size:12px">🗑 Өшіру</button>'+
+  '</div></div>'+
+  // Options
+  '<div class="adm-field">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+  '<label class="adm-label" style="margin-bottom:0">Жауап нұсқалары <span style="font-weight:400;text-transform:none;font-size:11px">(✓ — дұрыс жауап)</span></label>'+
+  '<div style="display:flex;gap:6px">'+
+  '<button onclick="addSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer">+ Қосу</button>'+
+  '<button onclick="removeSSOptRow()" style="padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.08);color:#EF4444;font-size:12px;font-weight:700;cursor:pointer">− Өшіру</button>'+
+  '</div></div>'+
+  '<div id="sqf-opts">'+
+  opts.map(function(opt,i){
+    return'<div class="opt-editor" id="sopt-row-'+i+'">'+
+    '<span style="width:20px;font-weight:700;color:var(--text2);font-size:13px">'+LETTERS[i]+'</span>'+
+    '<input type="text" value="'+escHtml(opt)+'" placeholder="Нұсқа '+(i+1)+'"/>'+
+    '<button class="opt-correct-btn'+(i===(qData?qData.correct_index:0)?" correct":"")+'" id="sopt-correct-'+i+'" onclick="setSCorrectOpt('+i+')" title="Дұрыс жауап">✓</button>'+
+    '</div>';
+  }).join("")+
+  '</div></div>'+
+  // Explanation (HW only)
+  (isHw?
+  '<div class="adm-field"><label class="adm-label">Түсіндірме — міндетті емес</label>'+
+  '<textarea class="adm-textarea" id="sqf-expl" placeholder="Дұрыс жауаптың түсіндірмесі...">'+escHtml(qData?qData.explanation||"":"")+'</textarea></div>'+
+  '<div class="adm-field"><label class="adm-label">Түсіндірмеге сурет — міндетті емес</label>'+
+  '<div class="img-upload-area" id="ss-expl-img-area">'+
+  '<input type="file" accept="image/*" id="sqf-expl-image" onchange="previewExplImage(event)"/>'+
+  '<div id="ss-expl-img-placeholder"'+(qData&&qData.explanation_image_url?' style="display:none"':'')+'>'+
+  '<div style="font-size:24px;margin-bottom:4px">🖼</div>'+
+  '<div style="font-size:12px;color:var(--text2)">Түсіндірмеге сурет жүктеу</div>'+
   '</div>'+
+  '<img id="ss-expl-img-preview" class="img-preview" style="display:'+(qData&&qData.explanation_image_url?"block":"none")+'" src="'+(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'"/>'+
+  '</div>'+
+  '<div style="margin-top:6px;display:flex;gap:8px;align-items:center">'+
+  '<input class="adm-input" id="sqf-expl-img-url" value="'+escHtml(qData&&qData.explanation_image_url?qData.explanation_image_url:"")+'" placeholder="немесе URL қойыңыз" style="flex:1" oninput="syncExplImgUrl(this.value)"/>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="clearExplImage()" style="padding:8px 12px;font-size:12px">🗑</button>'+
+  '</div></div>':"")+ 
+  // Order
+  '<div class="adm-field"><label class="adm-label">Реті</label>'+
+  '<input class="adm-input" id="sqf-order" type="number" min="1" value="'+(qData?qData.order_num||1:1)+'"/></div>'+
+  '<div style="display:flex;gap:10px;margin-top:4px">'+
+  '<button class="adm-btn adm-btn-primary" onclick="saveSSQ(\''+wrapId+'\',\''+listId+'\',\''+type+'\')">💾 Сақтау</button>'+
+  '<button class="adm-btn adm-btn-ghost" onclick="document.getElementById(\''+wrapId+'\').innerHTML=\'\'">Болдырмау</button>'+
+  '</div>'+
+  '<div id="sqf-msg" style="margin-top:10px;font-size:13px;display:none"></div>'+
   '</div>';
+
+  wrap.scrollIntoView({behavior:"smooth"});
 }
 
 
@@ -2221,56 +2261,69 @@ window.startHwQuiz=function(){
 
 function renderHwQuiz(){
   if(!qState.qs.length)return;
-  var q=qState.qs[qState.cur];
-  var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
   var answered=Object.keys(qState.ans).length;
   var pct=answered/qState.qs.length*100;
   var el=document.getElementById("pg-topic");
-
-  var html='<div class="quiz-hdr">'+
-  '<button onclick="if(confirm(\''+(lang==="kz"?"Тесттен шығасыз ба?":"Выйти из теста?")+'\'))renderTopicPageNew();" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">←</button>'+
-  '<div style="background:rgba(37,99,235,.2);color:#60A5FA;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(37,99,235,.3)">📝 '+t("hwQuiz")+'</div>'+
-  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span>'+
-  '</div>'+
-  '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
-  '<div class="q-wrap">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' / '+qState.qs.length+'</span>'+
-  '</div>'+
-  '<div class="q-card">'+(q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:220px;border-radius:8px;margin-bottom:12px;display:block"/>':'')+'<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
-  '<div class="opts">';
-  opts.forEach(function(opt,i){
-    var sel=qState.ans[q.id]===i;
-    html+='<div class="opt'+(sel?" sel":"")+'" onclick="pickHwAns(\''+q.id+'\','+i+')">'+
-    '<span class="opt-let">'+"ABCDE"[i]+'</span>'+
-    '<span class="opt-txt">'+opt+'</span></div>';
-  });
-  html+='</div>'+
-  '<div class="q-nav">'+
-  '<button class="qbtn qbtn-prev" onclick="hwNav(-1)" '+(qState.cur===0?"disabled":"")+'">← '+t("prev")+'</button>'+
-  '<div class="q-dots">';
+  var navHidden=qState.navHidden||false;
+  var navDots="";
   qState.qs.forEach(function(q2,i){
-    var bg=i===qState.cur?"#2563EB":qState.ans[q2.id]!==undefined?"#22C55E":"var(--border)";
-    html+='<div class="qdot" onclick="hwGoto('+i+')" style="background:'+bg+'"></div>';
+    var isAns=qState.ans[q2.id]!==undefined;
+    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+(isAns?"#22C55E":"var(--border)")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isAns?"#fff":"var(--text2)")+';transition:all .15s">'+(i+1)+'</div>';
   });
-  html+='</div>';
-  if(qState.cur<qState.qs.length-1){
-    html+='<button class="qbtn qbtn-next" onclick="hwNav(1)">'+t("next")+' →</button>';
-  }else{
-    html+='<button class="qbtn qbtn-done" onclick="askFinishHw()">✓ '+t("finish")+'</button>';
-  }
-  html+='</div>'+
-  '<div class="q-stats"><span>✅ '+answered+' '+t("answered")+'</span><span>⭕ '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
-  '</div>'+
-  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
-  el.innerHTML=html;
+  var questionsHtml="";
+  qState.qs.forEach(function(q,i){
+    var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
+    var selAns=qState.ans[q.id];
+    questionsHtml+='<div class="q-block" id="hwqblock-'+i+'">'+
+    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div></div>'+
+    (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
+    '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
+    opts.forEach(function(opt,j){
+      questionsHtml+='<div class="opt'+(selAns===j?" sel":"")+'" onclick="hwPickScroll(\''+q.id+'\','+j+','+i+')"><span class="opt-let">'+"ABCDE"[j]+'</span><span class="opt-txt">'+opt+'</span></div>';
+    });
+    questionsHtml+='</div></div>';
+  });
+  el.innerHTML=
+  '<div class="quiz-hdr">'+
+  '<button onclick="hwExitBtn()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">\u2190</button>'+
+  '<div style="background:rgba(37,99,235,.2);color:#60A5FA;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(37,99,235,.3)">\uD83D\uDCDD '+t("hwQuiz")+'</div>'+
+  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span></div>'+
+  '<div class="q-progress"><div class="q-prog-fill" id="hw-prog-fill" style="width:'+pct+'%"></div></div>'+
+  '<div style="display:flex;gap:16px;padding:0 16px 32px;max-width:1100px;margin:0 auto">'+
+  '<div style="flex:1;min-width:0"><div style="display:flex;flex-direction:column;gap:16px">'+questionsHtml+'</div>'+
+  '<div style="margin-top:24px;text-align:center"><button class="qbtn qbtn-done" style="padding:14px 40px;font-size:15px" onclick="askFinishHw()">\u2713 '+t("finish")+'</button></div></div>'+
+  '<div class="mock-sidebar"><div class="mock-nav-panel">'+
+  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+  '<div class="mock-nav-title" style="margin-bottom:0">\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f</div>'+
+  '<button onclick="hwToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button></div>'+
+  '<div style="'+(navHidden?"display:none":"")+'">'+
+  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\u2B55 <b id="hw-stat-skip">'+(qState.qs.length-answered)+'</b></span></div>'+
+  '<div class="mock-nav-grid" id="hw-nav-grid">'+navDots+'</div>'+
+  '<div class="mock-nav-legend">'+
+  '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
+  '<span><i style="width:12px;height:12px;border-radius:3px;background:var(--border);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u043e\u0441":"\u041f\u0443\u0441\u0442\u043e\u0439")+'</span>'+
+  '</div></div></div></div></div>'+
+  '<div class="wm">'+(user?user.name+" \u00b7 ":'')+'Bright Education</div>';
 }
+window.hwPickScroll=function(qId,j,qi){
+  qState.ans[qId]=j;
+  var block=document.getElementById("hwqblock-"+qi);
+  if(block){block.querySelectorAll(".opt").forEach(function(el,i){el.className="opt"+(i===j?" sel":"");});}
+  var ng=document.getElementById("hw-nav-grid");
+  if(ng){var dots=ng.querySelectorAll("div");if(dots[qi]){dots[qi].style.background="#22C55E";dots[qi].style.color="#fff";}}
+  var pb=document.getElementById("hw-prog-fill");if(pb)pb.style.width=(Object.keys(qState.ans).length/qState.qs.length*100)+"%";
+  var ae=document.getElementById("hw-stat-ans");if(ae)ae.textContent=Object.keys(qState.ans).length+"/"+qState.qs.length;
+  var se=document.getElementById("hw-stat-skip");if(se)se.textContent=(qState.qs.length-Object.keys(qState.ans).length);
+};
+window.hwScrollTo=function(i){var b=document.getElementById("hwqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
+window.hwToggleNav=function(){qState.navHidden=!qState.navHidden;renderHwQuiz();};
+window.hwExitBtn=function(){if(confirm(lang==="kz"?"\u0422\u0435\u0441\u0442\u0442\u0435\u043d \u0448\u044b\u0493\u0430\u0441\u044b\u0437 \u0431\u0430?":"\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u0441\u0442\u0430?"))renderTopicPageNew();};
 window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
-window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderHwQuiz();};
-window.hwGoto=function(i){qState.cur=i;renderHwQuiz();};
+window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));};
+window.hwGoto=function(i){qState.cur=i;};
 window.askFinishHw=function(){
   var a=Object.keys(qState.ans).length;
-  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeHwQuiz);
+  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"\u0436\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0434\u044b":"\u043e\u0442\u0432\u0435\u0447\u0435\u043d\u043e"),finalizeHwQuiz);
 };
 
 async function finalizeHwQuiz(){
@@ -2385,84 +2438,66 @@ window.startSSQuizNew=function(mode){
 function renderSSQuiz(){
   if(!qState.qs.length){
     document.getElementById("pg-topic").innerHTML=
-    '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPage();showPage(\'topic\')">'+String.fromCharCode(8592)+'</button>'+
+    '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPage();showPage(\'topic\')">←</button>'+
     '<div class="app-title">'+t("startQuiz")+'</div></div>'+
-    '<div class="empty"><div class="empty-ico">'+String.fromCharCode(10067)+'</div><p style="font-size:14px">'+
-    (lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b\u0442\u0430\u0440 \u0436\u043e\u049b. Admin \u043f\u0430\u043d\u0435\u043b\u0456\u043d\u0435\u043d \u049b\u043e\u0441\u044b\u04a3\u044b\u0437.":"\u0412\u043e\u043f\u0440\u043e\u0441\u044b \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044e\u0442.")+
-    '</p></div>';
+    '<div class="empty"><div class="empty-ico">❓</div><p style="font-size:14px">Сұрақтар жоқ. Admin панелінен қосыңыз.</p></div>';
     return;
   }
   var q=qState.qs[qState.cur];
   var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
   var answered=Object.keys(qState.ans).length;
-  var flaggedCount=Object.keys(qState.flags||{}).length;
   var pct=answered/qState.qs.length*100;
   var el=document.getElementById("pg-topic");
-  var navHidden=qState.navHidden||false;
-  var navDots="";
-  qState.qs.forEach(function(q2,i){
-    var isCur=i===qState.cur,isAns=qState.ans[q2.id]!==undefined,isFlag=qState.flags&&qState.flags[q2.id];
-    var bg=isCur?"#2563EB":isFlag?"#F59E0B":isAns?"#22C55E":"var(--border)";
-    navDots+='<div onclick="ssGoto('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+bg+';border:2px solid '+(isCur?"rgba(255,255,255,.4)":"transparent")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .15s">'+(i+1)+'</div>';
-  });
+
   var html='<div class="quiz-hdr">'+
-  '<button onclick="backFromQuiz()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">'+String.fromCharCode(8592)+'</button>'+
-  (qState.mode==="timer"?'<div class="q-timer" id="q-timer-el">'+String.fromCharCode(9201)+' '+fmtTime(qState.time)+'</div>':
-  '<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">\uD83C\uDF31 Practice</div>')+
+  '<button onclick="backFromQuiz()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">←</button>'+
+  (qState.mode==="timer"?'<div class="q-timer" id="q-timer-el">⏱ '+fmtTime(qState.time)+'</div>':
+  '<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">🌱 Practice</div>')+
   '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span>'+
   '</div>'+
   '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
-  '<div style="display:flex;gap:16px;padding:0 16px 16px;max-width:1100px;margin:0 auto">'+
-  '<div style="flex:1;min-width:0">'+
-  '<div class="q-wrap" style="margin:0">'+
+  '<div class="q-wrap">'+
   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
   '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' '+t("of")+' '+qState.qs.length+'</span>'+
-  '<button onclick="ssToggleFlag(\''+q.id+'\')" style="padding:5px 12px;border-radius:8px;border:1px solid '+(qState.flags&&qState.flags[q.id]?"#F59E0B":"var(--border)")+';background:'+(qState.flags&&qState.flags[q.id]?"rgba(245,158,11,.15)":"transparent")+';color:'+(qState.flags&&qState.flags[q.id]?"#F59E0B":"var(--text2)")+';font-size:13px;cursor:pointer;font-weight:700">\uD83D\uDEA9 '+(qState.flags&&qState.flags[q.id]?(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0434\u0456":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d"):(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u0443":"\u041e\u0442\u043c\u0435\u0442\u0438\u0442\u044c"))+'</button>'+
+  '<span style="padding:3px 10px;border-radius:20px;font-size:11px;background:var(--bl);color:var(--blue)">'+(q.difficulty==="easy"?"🟢":q.difficulty==="medium"?"🟡":"🔴")+'</span>'+
   '</div>'+
   '<div class="q-card">'+(q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:220px;border-radius:8px;margin-bottom:12px;display:block"/>':'')+'<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
   '<div class="opts">';
   opts.forEach(function(opt,i){
     var sel=qState.ans[q.id]===i;
-    html+='<div class="opt'+(sel?" sel":"")+(qState.flags&&qState.flags[q.id]?" flag":"")+'" onclick="pickSSAns(\''+q.id+'\','+i+')">'+
+    html+='<div class="opt'+(sel?" sel":"")+'" onclick="pickSSAns(\''+q.id+'\','+i+')">'+
     '<span class="opt-let">'+"ABCDE"[i]+'</span>'+
     '<span class="opt-txt">'+opt+'</span></div>';
   });
   html+='</div>'+
   '<div class="q-nav">'+
-  '<button class="qbtn qbtn-prev" onclick="ssNav(-1)" '+(qState.cur===0?"disabled":"")+'>'+String.fromCharCode(8592)+' '+t("prev")+'</button>';
+  '<button class="qbtn qbtn-prev" onclick="ssNav(-1)" '+(qState.cur===0?"disabled":"")+'">← '+t("prev")+'</button>'+
+  '<div class="q-dots">';
+  qState.qs.forEach(function(q2,i){
+    var bg=i===qState.cur?"#2563EB":qState.ans[q2.id]!==undefined?"#22C55E":"var(--border)";
+    html+='<div class="qdot" onclick="ssGoto('+i+')" style="background:'+bg+'"></div>';
+  });
+  html+='</div>';
   if(qState.cur<qState.qs.length-1){
-    html+='<button class="qbtn qbtn-next" onclick="ssNav(1)">'+t("next")+' '+String.fromCharCode(8594)+'</button>';
+    html+='<button class="qbtn qbtn-next" onclick="ssNav(1)">'+t("next")+' →</button>';
   }else{
-    html+='<button class="qbtn qbtn-done" onclick="askFinishSS()">\u2713 '+t("finish")+'</button>';
+    html+='<button class="qbtn qbtn-done" onclick="askFinishSS()">✓ '+t("finish")+'</button>';
   }
   html+='</div>'+
-  '<div class="q-stats"><span>\u2705 '+answered+' '+t("answered")+'</span><span>\u2B55 '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
-  '</div></div>'+
-  '<div class="mock-sidebar">'+
-  '<div class="mock-nav-panel">'+
-  '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-  '<div class="mock-nav-title" style="margin-bottom:0">'+(lang==="kz"?"\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f":"\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f")+'</div>'+
-  '<button onclick="ssToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button>'+
+  '<div class="q-stats"><span>✅ '+answered+' '+t("answered")+'</span><span>⭕ '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
   '</div>'+
-  '<div style="'+(navHidden?"display:none":"")+'">'+
-  '<div class="mock-stats-row"><span>\u2705 <b>'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b>'+flaggedCount+'</b></span></div>'+
-  '<div class="mock-nav-grid">'+navDots+'</div>'+
-  '<div class="mock-nav-legend">'+
-  '<span><i style="width:12px;height:12px;border-radius:3px;background:#2563EB;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u049a\u0430\u0437\u0456\u0440\u0433\u0456":"\u0422\u0435\u043a\u0443\u0449\u0438\u0439")+'</span>'+
-  '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
-  '<span><i style="width:12px;height:12px;border-radius:3px;background:#F59E0B;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0433\u0435\u043d":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d")+'</span>'+
-  '<span><i style="width:12px;height:12px;border-radius:3px;background:var(--border);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u043e\u0441":"\u041f\u0443\u0441\u0442\u043e\u0439")+'</span>'+
-  '</div></div></div></div>'+
-  '</div>'+
-  '<div class="wm">'+(user?user.name+" \u00b7 ":'')+'Bright Education</div>';
+  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
   el.innerHTML=html;
 }
-window.ssToggleFlag=function(qId){if(!qState.flags)qState.flags={};if(qState.flags[qId])delete qState.flags[qId];else qState.flags[qId]=true;renderSSQuiz();};
-window.ssToggleNav=function(){qState.navHidden=!qState.navHidden;renderSSQuiz();};
 window.pickSSAns=function(qId,i){qState.ans[qId]=i;renderSSQuiz();};
 window.ssNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderSSQuiz();};
 window.ssGoto=function(i){qState.cur=i;renderSSQuiz();};
 window.backFromQuiz=function(){clearInterval(qState.timer);renderTopicPage();showPage("topic");};
+window.askFinishSS=function(){
+  var a=Object.keys(qState.ans).length;
+  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeSSQuiz);
+};
+
 
 // Override finalize to use new result page
 window.askFinishSS=function(){
@@ -2665,8 +2700,6 @@ window.startMock=async function(testId,mode,subj){
 
 function renderMockQuiz(){
   if(!qState.qs.length)return;
-  var q=qState.qs[qState.cur];
-  var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
   var answered=Object.keys(qState.ans).length;
   var flaggedCount=Object.keys(qState.flags||{}).length;
   var pct=answered/qState.qs.length*100;
@@ -2674,73 +2707,71 @@ function renderMockQuiz(){
   var navHidden=qState.navHidden||false;
   var navDots="";
   qState.qs.forEach(function(q2,i){
-    var isCur=i===qState.cur,isAns=qState.ans[q2.id]!==undefined,isFlag=qState.flags&&qState.flags[q2.id];
-    var bg=isCur?"#2563EB":isFlag?"#F59E0B":isAns?"#22C55E":"var(--border)";
-    navDots+='<div onclick="mGoto('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+bg+';border:2px solid '+(isCur?"rgba(255,255,255,.4)":"transparent")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:all .15s">'+(i+1)+'</div>';
+    var isAns=qState.ans[q2.id]!==undefined,isFlag=qState.flags&&qState.flags[q2.id];
+    var bg=isFlag?"#F59E0B":isAns?"#22C55E":"var(--border)";
+    navDots+='<div onclick="mockScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+bg+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isAns||isFlag?"#fff":"var(--text2)")+';transition:all .15s">'+(i+1)+'</div>';
   });
-  var html=
+  var questionsHtml="";
+  qState.qs.forEach(function(q,i){
+    var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
+    var isFlagged=qState.flags&&qState.flags[q.id],selAns=qState.ans[q.id];
+    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="mqblock-'+i+'">'+
+    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+
+    '<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="mToggleFlag(\''+q.id+'\')">\uD83D\uDEA9</button></div>'+
+    (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
+    '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
+    opts.forEach(function(opt,j){
+      questionsHtml+='<div class="opt'+(selAns===j?" sel":"")+'" onclick="mPickScroll(\''+q.id+'\','+j+','+i+')"><span class="opt-let">'+"ABCDE"[j]+'</span><span class="opt-txt">'+opt+'</span></div>';
+    });
+    questionsHtml+='</div></div>';
+  });
+  el.innerHTML=
   '<div class="quiz-hdr">'+
-  '<button onclick="mockExitBtn()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">'+String.fromCharCode(8592)+'</button>'+
-  (qState.mode==="timer"?'<div class="q-timer" id="m-timer-el">'+String.fromCharCode(9201)+' '+fmtTime(qState.time)+'</div>':
-  '<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">\uD83C\uDF31 Practice</div>')+
-  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(qState.subject==="math"?t("math"):t("ct"))+'</span>'+
-  '</div>'+
-  '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
-  '<div style="display:flex;gap:16px;padding:0 16px 16px;max-width:1100px;margin:0 auto">'+
-  '<div style="flex:1;min-width:0">'+
-  '<div class="q-wrap" style="margin:0">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' '+t("of")+' '+qState.qs.length+'</span>'+
-  '<button onclick="mToggleFlag(\''+q.id+'\')" style="padding:5px 12px;border-radius:8px;border:1px solid '+(qState.flags&&qState.flags[q.id]?"#F59E0B":"var(--border)")+';background:'+(qState.flags&&qState.flags[q.id]?"rgba(245,158,11,.15)":"transparent")+';color:'+(qState.flags&&qState.flags[q.id]?"#F59E0B":"var(--text2)")+';font-size:13px;cursor:pointer;font-weight:700">\uD83D\uDEA9 '+(qState.flags&&qState.flags[q.id]?(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0434\u0456":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d"):(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u0443":"\u041e\u0442\u043c\u0435\u0442\u0438\u0442\u044c"))+'</button>'+
-  '</div>'+
-  '<div class="q-card">'+
-  (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:220px;border-radius:8px;margin-bottom:12px;display:block"/>':'')+
-  '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
-  '<div class="opts">';
-  opts.forEach(function(opt,i){
-    var sel=qState.ans[q.id]===i;
-    html+='<div class="opt'+(sel?" sel":"")+'" id="mopt-'+i+'" style="cursor:pointer">'+
-    '<span class="opt-let">'+("ABCDE"[i])+'</span>'+
-    '<span class="opt-txt">'+opt+'</span></div>';
-  });
-  html+='</div>'+
-  '<div class="q-nav">'+
-  '<button class="qbtn qbtn-prev" onclick="mNav(-1)" '+(qState.cur===0?"disabled":"")+'>'+String.fromCharCode(8592)+' '+t("prev")+'</button>';
-  if(qState.cur<qState.qs.length-1){
-    html+='<button class="qbtn qbtn-next" onclick="mNav(1)">'+t("next")+' '+String.fromCharCode(8594)+'</button>';
-  }else{
-    html+='<button class="qbtn qbtn-done" onclick="askFinishMock()">\u2713 '+t("finish")+'</button>';
-  }
-  html+='</div>'+
-  '<div class="q-stats"><span>\u2705 '+answered+' '+t("answered")+'</span><span>\u2B55 '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
-  '</div></div>'+
-  '<div class="mock-sidebar">'+
-  '<div class="mock-nav-panel">'+
+  '<button onclick="mockExitBtn()" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">\u2190</button>'+
+  (qState.mode==="timer"?'<div class="q-timer" id="m-timer-el">\u23F1 '+fmtTime(qState.time)+'</div>':'<div style="background:rgba(22,163,74,.2);color:#4ADE80;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(22,163,74,.3)">\uD83C\uDF31 Practice</div>')+
+  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(qState.subject==="math"?t("math"):t("ct"))+'</span></div>'+
+  '<div class="q-progress"><div class="q-prog-fill" id="m-prog-fill" style="width:'+pct+'%"></div></div>'+
+  '<div style="display:flex;gap:16px;padding:0 16px 32px;max-width:1100px;margin:0 auto">'+
+  '<div style="flex:1;min-width:0"><div style="display:flex;flex-direction:column;gap:16px">'+questionsHtml+'</div>'+
+  '<div style="margin-top:24px;text-align:center"><button class="qbtn qbtn-done" style="padding:14px 40px;font-size:15px" onclick="askFinishMock()">\u2713 '+t("finish")+'</button></div></div>'+
+  '<div class="mock-sidebar"><div class="mock-nav-panel">'+
   '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
-  '<div class="mock-nav-title" style="margin-bottom:0">'+(lang==="kz"?"\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f":"\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f")+'</div>'+
-  '<button onclick="mToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button>'+
-  '</div>'+
-  '<div style="'+(navHidden?"display:none":"")+'">'+
-  '<div class="mock-stats-row"><span>\u2705 <b>'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b>'+flaggedCount+'</b></span></div>'+
-  '<div class="mock-nav-grid">'+navDots+'</div>'+
+  '<div class="mock-nav-title" style="margin-bottom:0">\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f</div>'+
+  '<button onclick="mToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button></div>'+
+  '<div id="mock-nav-body" style="'+(navHidden?"display:none":"")+'">'+
+  '<div class="mock-stats-row"><span>\u2705 <b id="mock-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b id="mock-stat-flag">'+flaggedCount+'</b></span></div>'+
+  '<div class="mock-nav-grid" id="mock-nav-grid">'+navDots+'</div>'+
   '<div class="mock-nav-legend">'+
-  '<span><i style="width:12px;height:12px;border-radius:3px;background:#2563EB;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u049a\u0430\u0437\u0456\u0440\u0433\u0456":"\u0422\u0435\u043a\u0443\u0449\u0438\u0439")+'</span>'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:#F59E0B;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0433\u0435\u043d":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d")+'</span>'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:var(--border);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u043e\u0441":"\u041f\u0443\u0441\u0442\u043e\u0439")+'</span>'+
-  '</div></div></div></div>'+
-  '</div>'+
+  '</div></div></div></div></div>'+
   '<div class="wm">'+(user?user.name+" \u00b7 ":'')+'Bright Education</div>';
-  el.innerHTML=html;
-  opts.forEach(function(opt,i){
-    var el2=document.getElementById("mopt-"+i);
-    if(el2)(function(idx){el2.addEventListener("click",function(){qState.ans[q.id]=idx;renderMockQuiz();});})(i);
-  });
 }
-window.mToggleFlag=function(qId){if(!qState.flags)qState.flags={};if(qState.flags[qId])delete qState.flags[qId];else qState.flags[qId]=true;renderMockQuiz();};
+window.mPickScroll=function(qId,j,qi){
+  qState.ans[qId]=j;
+  var block=document.getElementById("mqblock-"+qi);
+  if(block){block.querySelectorAll(".opt").forEach(function(el,i){el.className="opt"+(i===j?" sel":"");});}
+  var ng=document.getElementById("mock-nav-grid");
+  if(ng){var dots=ng.querySelectorAll("div");if(dots[qi]){dots[qi].style.background="#22C55E";dots[qi].style.color="#fff";}}
+  var pb=document.getElementById("m-prog-fill");if(pb)pb.style.width=(Object.keys(qState.ans).length/qState.qs.length*100)+"%";
+  var ae=document.getElementById("mock-stat-ans");if(ae)ae.textContent=Object.keys(qState.ans).length+"/"+qState.qs.length;
+};
+window.mToggleFlag=function(qId){
+  if(!qState.flags)qState.flags={};
+  if(qState.flags[qId])delete qState.flags[qId];else qState.flags[qId]=true;
+  var q=qState.qs.find(function(q2){return q2.id===qId;});if(!q)return;
+  var qi=qState.qs.indexOf(q);
+  var block=document.getElementById("mqblock-"+qi);
+  if(block){block.className="q-block"+(qState.flags[qId]?" flagged":"");var btn=block.querySelector(".q-flag-btn");if(btn)btn.className="q-flag-btn"+(qState.flags[qId]?" active":"");}
+  var ng=document.getElementById("mock-nav-grid");
+  if(ng){var dots=ng.querySelectorAll("div");if(dots[qi])dots[qi].style.background=qState.flags[qId]?"#F59E0B":(qState.ans[qId]!==undefined?"#22C55E":"var(--border)");}
+  var fe=document.getElementById("mock-stat-flag");if(fe)fe.textContent=Object.keys(qState.flags||{}).length;
+};
+window.mockScrollTo=function(i){var b=document.getElementById("mqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
 window.mToggleNav=function(){qState.navHidden=!qState.navHidden;renderMockQuiz();};
-window.mGoto=function(i){qState.cur=i;renderMockQuiz();};
-window.mNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderMockQuiz();};
+window.mNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));};
+window.mGoto=function(i){qState.cur=i;};
 
 window.askFinishMock=function(){
   var a=Object.keys(qState.ans).length;
@@ -4105,60 +4136,6 @@ window.startHwQuiz=function(){
   renderHwQuiz();showPage("topic");
 };
 
-function renderHwQuiz(){
-  if(!qState.qs.length)return;
-  var q=qState.qs[qState.cur];
-  var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-  var answered=Object.keys(qState.ans).length;
-  var pct=answered/qState.qs.length*100;
-  var el=document.getElementById("pg-topic");
-
-  var html='<div class="quiz-hdr">'+
-  '<button onclick="if(confirm(\''+(lang==="kz"?"Тесттен шығасыз ба?":"Выйти из теста?")+'\'))renderTopicPageNew();" style="background:none;border:none;color:rgba(255,255,255,.5);cursor:pointer;font-size:20px;padding:4px">←</button>'+
-  '<div style="background:rgba(37,99,235,.2);color:#60A5FA;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:700;border:1px solid rgba(37,99,235,.3)">📝 '+t("hwQuiz")+'</div>'+
-  '<span style="font-size:12px;color:rgba(255,255,255,.5)">'+(ctx.subject==="math"?t("math"):t("ct"))+'</span>'+
-  '</div>'+
-  '<div class="q-progress"><div class="q-prog-fill" style="width:'+pct+'%"></div></div>'+
-  '<div class="q-wrap">'+
-  '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'+
-  '<span style="font-size:13px;color:var(--text2)">'+t("question")+' '+(qState.cur+1)+' / '+qState.qs.length+'</span>'+
-  '</div>'+
-  '<div class="q-card">'+(q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:220px;border-radius:8px;margin-bottom:12px;display:block"/>':'')+'<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div></div>'+
-  '<div class="opts">';
-  opts.forEach(function(opt,i){
-    var sel=qState.ans[q.id]===i;
-    html+='<div class="opt'+(sel?" sel":"")+'" onclick="pickHwAns(\''+q.id+'\','+i+')">'+
-    '<span class="opt-let">'+"ABCDE"[i]+'</span>'+
-    '<span class="opt-txt">'+opt+'</span></div>';
-  });
-  html+='</div>'+
-  '<div class="q-nav">'+
-  '<button class="qbtn qbtn-prev" onclick="hwNav(-1)" '+(qState.cur===0?"disabled":"")+'">← '+t("prev")+'</button>'+
-  '<div class="q-dots">';
-  qState.qs.forEach(function(q2,i){
-    var bg=i===qState.cur?"#2563EB":qState.ans[q2.id]!==undefined?"#22C55E":"var(--border)";
-    html+='<div class="qdot" onclick="hwGoto('+i+')" style="background:'+bg+'"></div>';
-  });
-  html+='</div>';
-  if(qState.cur<qState.qs.length-1){
-    html+='<button class="qbtn qbtn-next" onclick="hwNav(1)">'+t("next")+' →</button>';
-  }else{
-    html+='<button class="qbtn qbtn-done" onclick="askFinishHw()">✓ '+t("finish")+'</button>';
-  }
-  html+='</div>'+
-  '<div class="q-stats"><span>✅ '+answered+' '+t("answered")+'</span><span>⭕ '+(qState.qs.length-answered)+' '+t("notAnswered")+'</span></div>'+
-  '</div>'+
-  '<div class="wm">'+(user?user.name+" · ":"")+'Bright Education</div>';
-  el.innerHTML=html;
-}
-window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
-window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));renderHwQuiz();};
-window.hwGoto=function(i){qState.cur=i;renderHwQuiz();};
-window.askFinishHw=function(){
-  var a=Object.keys(qState.ans).length;
-  showModal(t("confirmTitle"),a+"/"+qState.qs.length+" "+(lang==="kz"?"жауапталды":"отвечено"),finalizeHwQuiz);
-};
-
 async function finalizeHwQuiz(){
   if(qState.submitted)return;qState.submitted=true;
   var qs=qState.qs;
@@ -4328,10 +4305,6 @@ window.goTopic=async function(topicId){
   var qs=await db.getQuestions(topicId);
   ctx.topicId=topicId;ctx.topic=topic;ctx.topicQs=qs;
   renderTopicPageNew();
-};
-
-window.mockExitBtn=function(){
-  if(confirm(lang==="kz"?"Тестен шығасыз ба?":"Выйти из теста?")){ clearInterval(qState.timer);renderMockSelect();}
 };
 </script>
 </div><!-- /main-content -->
