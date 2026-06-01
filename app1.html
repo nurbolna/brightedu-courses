@@ -2290,6 +2290,7 @@ window.askFinishHw=function(){
 async function finalizeHwQuiz(){
   if(qState.submitted)return;qState.submitted=true;
   var qs=qState.qs;
+  if(qs[0])console.log("HW q fields:",Object.keys(qs[0]),"expl:",qs[0].explanation,"expl_img:",qs[0].explanation_image_url);
   var score=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
   if(user)await db.saveHwAttempt(user.id,qState.topicId,qState.subject,score,qs.length);
   // Update ctx.hwAttempts
