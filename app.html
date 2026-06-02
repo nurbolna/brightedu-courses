@@ -992,14 +992,31 @@ var db={
   async markNotifRead(id){
     try{await sb.from("notifications").update({read:true}).eq("id",id);}catch(e){}
   },
+  async dismissNotif(id){
+    try{await sb.from("notifications").delete().eq("id",id);}catch(e){}
+  },
   async getChallenge(id){
     try{var r=await sb.from("challenges").select("*").eq("id",id).single();return r.data;}
     catch(e){return null;}
   },
-  async acceptChallenge(challengeId,score,total){
+  async acceptChallenge(challengeId,score,total,accepterName){
     var r=await sb.from("challenges").update({to_score:score,to_total:total,status:"completed"}).eq("id",challengeId).select().single();
     if(r.error)throw r.error;
-    return r.data;
+    var ch=r.data;
+    // Жіберушіге notification жіберу
+    try{
+      await sb.from("notifications").insert({
+        user_id:ch.from_user_id,type:"challenge_result",
+        data:{
+          challenge_id:ch.id,
+          to_name:accepterName,
+          from_score:ch.from_score,from_total:ch.from_total,
+          to_score:score,to_total:total,
+          subject:ch.subject
+        }
+      });
+    }catch(e){}
+    return ch;
   },
   async getMyChallenges(uid){
     try{
@@ -1184,11 +1201,28 @@ window.toggleNotifDropdown=function(){
       if(n.type==="challenge"){
         var d=n.data||{};
         var pct=d.total?Math.round(d.score/d.total*100):0;
-        return'<div class="notif-item" onclick="openChallengeNotif(\''+n.id+'\',\''+JSON.stringify(d).replace(/'/g,"&#39;").replace(/"/g,"&quot;")+'\')" >'+
+        return'<div class="notif-item" onclick="openChallengeNotif(\''+n.id+'\',\''+JSON.stringify(d).replace(/'/g,"&#39;").replace(/"/g,"&quot;")+'\')">'+
         '<div style="display:flex;gap:8px;align-items:flex-start">'+
         '<span style="font-size:20px">⚔️</span>'+
         '<div><div style="font-size:13px;font-weight:700;margin-bottom:2px">'+d.from_name+' '+(lang==="kz"?"сені жарысқа шақырды!":"вызывает тебя на дуэль!")+'</div>'+
         '<div style="font-size:12px;color:var(--text2)">'+(d.subject==="math"?"📐 Math":"🧠 CT")+' · '+pct+'% — '+(lang==="kz"?"асып түсе аласың ба?":"сможешь превзойти?")+'</div>'+
+        '</div></div></div>';
+      }
+      if(n.type==="challenge_result"){
+        var d=n.data||{};
+        var myPct=d.from_total?Math.round(d.from_score/d.from_total*100):0;
+        var theirPct=d.to_total?Math.round(d.to_score/d.to_total*100):0;
+        var iWon=myPct>theirPct;var isDraw=myPct===theirPct;
+        var resultText=isDraw?(lang==="kz"?"Тең!":"Ничья!"):(iWon?(lang==="kz"?"Сен жеңдің! 🏆":"Ты победил! 🏆"):(lang==="kz"?d.to_name+" жеңді":d.to_name+" победил"));
+        var resultColor=isDraw?"#F59E0B":iWon?"#16A34A":"#EF4444";
+        return'<div class="notif-item" onclick="dismissChallengeResult(\''+n.id+'\',this)">'+
+        '<div style="display:flex;gap:8px;align-items:flex-start">'+
+        '<span style="font-size:20px">⚔️</span>'+
+        '<div style="flex:1">'+
+        '<div style="font-size:13px;font-weight:700;margin-bottom:2px">'+d.to_name+' '+(lang==="kz"?"тест тапсырды":"прошёл тест")+'</div>'+
+        '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">'+(d.subject==="math"?"📐 Math":"🧠 CT")+' · '+myPct+'% vs '+theirPct+'%</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+resultColor+'">'+resultText+'</div>'+
+        '<div style="font-size:11px;color:var(--text2);margin-top:2px">'+(lang==="kz"?"Басып жабу":"Нажми чтобы закрыть")+'</div>'+
         '</div></div></div>';
       }
       return'<div class="notif-item"><div style="font-size:13px">'+n.type+'</div></div>';
@@ -1239,6 +1273,22 @@ async function renderChallengeAccept(data){
   '</div>';
   showPage("dashboard");
 }
+
+window.dismissChallengeResult=async function(notifId,el){
+  await db.dismissNotif(notifId);
+  notifData=notifData.filter(function(n){return n.id!==notifId;});
+  var item=el.closest?el.closest(".notif-item"):el;
+  if(item)item.remove();
+  // Badge жаңарту
+  var badge=document.getElementById("notif-badge-el");
+  if(badge){
+    if(notifData.length){badge.textContent=notifData.length;badge.style.display="flex";}
+    else{badge.style.display="none";}
+  }
+  // Dropdown бос болса жабу
+  var dd=document.getElementById("notif-dropdown");
+  if(dd&&!notifData.length){dd.remove();}
+};
 
 window.acceptAndStart=function(challengeId,testId,subj){
   // Challenge ID-ны сақтаймыз, тест аяқталса автоматты нәтижені жазамыз
@@ -2790,8 +2840,54 @@ async function finalizeMock(){
   var timeTaken=qState.mode==="timer"?3600-qState.time:0;
   if(user)await db.saveResult(user.id,user.name,qState.subject,"mock",score,qState.qs.length,qState.mode,timeTaken);
   ctx.mockResult={score:score,total:qState.qs.length,ans:qState.ans,qs:qState.qs,subject:qState.subject,testId:qState.testId,mode:qState.mode,time:timeTaken};
+
+  // Дуэль болса — нәтижені сақтап, жеңімпаз modalін көрсету
+  if(ctx.activeChallenge&&ctx.activeChallenge.id){
+    try{
+      var ch=await db.acceptChallenge(ctx.activeChallenge.id,score,qState.qs.length,user?user.name:"");
+      ctx.activeChallenge=null;
+      // Жеңімпаз анықтау
+      var myPct=Math.round(score/qState.qs.length*100);
+      var theirPct=ch.from_total?Math.round(ch.from_score/ch.from_total*100):0;
+      var iWon=myPct>theirPct;
+      var isDraw=myPct===theirPct;
+      showDuelResultModal(ch.from_user_name,theirPct,ch.from_score,ch.from_total,myPct,score,qState.qs.length,iWon,isDraw);
+      return;
+    }catch(e){ctx.activeChallenge=null;}
+  }
+
   showPage("mock-result");
   renderMockResult();
+}
+
+function showDuelResultModal(opponentName,theirPct,theirScore,theirTotal,myPct,myScore,myTotal,iWon,isDraw){
+  var overlay=document.createElement("div");
+  overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:20px";
+  var emoji=isDraw?"🤝":iWon?"🏆":"💪";
+  var titleColor=isDraw?"#F59E0B":iWon?"#16A34A":"#EF4444";
+  var title=isDraw?(lang==="kz"?"Тең!":"Ничья!"):(iWon?(lang==="kz"?"Сен жеңдің!":"Ты победил!"):(lang==="kz"?opponentName+" жеңді!":opponentName+" победил!"));
+  overlay.id="duel-result-overlay";
+  overlay.innerHTML=
+  '<div style="background:linear-gradient(135deg,#0F172A,#1E1B4B);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:32px 28px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.5)">'+
+  '<div style="font-size:64px;margin-bottom:12px">'+emoji+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:28px;font-weight:800;color:'+titleColor+';margin-bottom:20px">'+title+'</div>'+
+  '<div style="display:flex;gap:12px;margin-bottom:24px">'+
+  '<div style="flex:1;background:rgba(255,255,255,.08);border-radius:14px;padding:16px">'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">'+opponentName+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:32px;font-weight:800;color:'+(theirPct>=75?"#16A34A":theirPct>=50?"#F59E0B":"#EF4444")+'">'+theirPct+'%</div>'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">'+theirScore+'/'+theirTotal+'</div>'+
+  '</div>'+
+  '<div style="display:flex;align-items:center;font-size:20px;font-weight:900;color:rgba(255,255,255,.3)">VS</div>'+
+  '<div style="flex:1;background:rgba(255,255,255,.08);border-radius:14px;padding:16px">'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:6px">'+(lang==="kz"?"Сен":"Ты")+'</div>'+
+  '<div style="font-family:Syne,sans-serif;font-size:32px;font-weight:800;color:'+(myPct>=75?"#16A34A":myPct>=50?"#F59E0B":"#EF4444")+'">'+myPct+'%</div>'+
+  '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">'+myScore+'/'+myTotal+'</div>'+
+  '</div></div>'+
+  '<button onclick="document.getElementById(\'duel-result-overlay\').remove();showPage(\'mock-result\');renderMockResult();" '+
+  'style="width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#2563EB,#7C3AED);color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.4)">'+
+  (lang==="kz"?"Нәтижені толық көру →":"Посмотреть результат →")+'</button>'+
+  '</div>';
+  document.body.appendChild(overlay);
 }
 
 
