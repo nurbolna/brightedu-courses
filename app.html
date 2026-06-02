@@ -4355,12 +4355,6 @@ window.goTopic=async function(topicId){
   ctx.topicId=topicId;ctx.topic=topic;ctx.topicQs=qs;
   renderTopicPageNew();
 };
-// ══════════════════════════════════════════════════════════════
-// renderRating() — Rating беті
-// ҚАЙДА ҚОСУ: app2.html-дің 4357-жолынан кейін (}; жолынан кейін)
-// </script> тегінен БҰРЫН
-// ══════════════════════════════════════════════════════════════
-
 async function renderRating(){
   showPage('rating');
   var el=document.getElementById('pg-rating');
