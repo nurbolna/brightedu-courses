@@ -2311,6 +2311,14 @@ function renderHwResult(score,qs){
   var pct=Math.round(score/qs.length*100);
   var el=document.getElementById("pg-topic");
 
+  window.hwToggleExpl=function(btn){
+    var body=btn.nextElementSibling;
+    var arrow=btn.querySelector(".expl-arrow");
+    var isOpen=body.style.display==="block";
+    body.style.display=isOpen?"none":"block";
+    if(arrow)arrow.style.transform=isOpen?"rotate(0deg)":"rotate(180deg)";
+  };
+
   function buildHwReview(filter){
     var items=qs.filter(function(q){
       var ua=qState.ans[q.id];
@@ -2322,19 +2330,21 @@ function renderHwResult(score,qs){
       return true;
     });
     if(!items.length)return'<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">'+(lang==="kz"?"Нәтиже жоқ":"Нет результатов")+'</div>';
-    return items.map(function(q,qi){
+    return items.map(function(q){
       var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
       var ua=qState.ans[q.id];
       var ok=ua===q.correct_index;
       var skip=ua===undefined;
+      var qNum=qs.indexOf(q)+1;
+      var qText=(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))||"";
       return'<div class="card" style="margin-bottom:10px;border-left:4px solid '+(skip?"var(--border)":ok?"#16A34A":"#EF4444")+';padding:14px">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
       '<span style="font-size:18px">'+(skip?"⭕":ok?"✅":"❌")+'</span>'+
-      '<span style="font-weight:700;font-size:14px">'+t("question")+' '+(qs.indexOf(q)+1)+'</span>'+
+      '<span style="font-weight:700;font-size:14px">'+t("question")+' '+qNum+'</span>'+
       '<span style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:20px;background:'+(ok?"rgba(22,163,74,.1)":"rgba(239,68,68,.1)")+';color:'+(ok?"#16A34A":"#EF4444")+';font-weight:700">'+
       (skip?(lang==="kz"?"Жауапсыз":"Пропущен"):ok?(lang==="kz"?"Дұрыс":"Верно"):(lang==="kz"?"Қате":"Неверно"))+'</span></div>'+
       (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:200px;border-radius:8px;margin-bottom:10px;display:block"/>':'')+
-      '<div style="font-size:14px;line-height:1.6;margin-bottom:10px;font-weight:500">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div>'+
+      (qText?'<div style="font-size:14px;line-height:1.6;margin-bottom:12px;color:var(--text)">'+qText+'</div>':'')+
       '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">'+
       opts.map(function(opt,j){
         var isUser=j===ua;
@@ -2348,8 +2358,7 @@ function renderHwResult(score,qs){
       }).join("")+'</div>'+
       (q.explanation||q.explanation_image_url?
       '<div style="border:1px solid rgba(37,99,235,.2);border-radius:10px;overflow:hidden;margin-top:4px">'+
-      '<button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.expl-arrow\').style.transform=this.nextElementSibling.style.display===\'block\'?\'rotate(180deg)\':\'rotate(0deg)\'" '+
-      'style="width:100%;padding:10px 14px;background:rgba(37,99,235,.06);border:none;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<button onclick="hwToggleExpl(this)" style="width:100%;padding:10px 14px;background:rgba(37,99,235,.06);border:none;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
       '<span style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</span>'+
       '<span class="expl-arrow" style="font-size:12px;color:var(--blue);transition:transform .2s">▼</span></button>'+
       '<div style="display:none;padding:12px;background:rgba(37,99,235,.03)">'+
@@ -2360,7 +2369,10 @@ function renderHwResult(score,qs){
     }).join("");
   }
 
-  var hwReviewFilter="all";
+  var cntAll=qs.length;
+  var cntCorrect=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
+  var cntWrong=qs.filter(function(q){var ua=qState.ans[q.id];return ua!==undefined&&ua!==q.correct_index;}).length;
+
   el.innerHTML=
   '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPageNew()">←</button>'+
   '<div><div class="app-title">📊 '+t("hwResult")+'</div></div></div>'+
@@ -2372,20 +2384,14 @@ function renderHwResult(score,qs){
   '<button onclick="renderTopicPageNew()" style="margin-top:16px;padding:11px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
   (lang==="kz"?"Тестке өту →":"К тесту →")+'</button>'+
   '</div>'+
-  // Filter buttons - improved design with counts
-  (function(){
-    var cntAll=qs.length;
-    var cntCorrect=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
-    var cntWrong=qs.filter(function(q){var ua=qState.ans[q.id];return ua!==undefined&&ua!==q.correct_index;}).length;
-    return '<div style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px">'+
-    '<button id="hwrf-all" onclick="hwSwitchReview(\'all\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)">'+
-    (lang==="kz"?"Барлығы":"Все")+' <span style="font-size:11px;opacity:.7">('+cntAll+')</span></button>'+
-    '<button id="hwrf-correct" onclick="hwSwitchReview(\'correct\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:transparent;color:var(--text2)">'+
-    '✅ '+(lang==="kz"?"Дұрыс":"Верно")+' <span style="font-size:11px;opacity:.7">('+cntCorrect+')</span></button>'+
-    '<button id="hwrf-wrong" onclick="hwSwitchReview(\'wrong\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:transparent;color:var(--text2)">'+
-    '❌ '+(lang==="kz"?"Қате":"Ошибки")+' <span style="font-size:11px;opacity:.7">('+cntWrong+')</span></button>'+
-    '</div>';
-  })()+
+  '<div style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px">'+
+  '<button id="hwrf-all" onclick="hwSwitchReview(&apos;all&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)">'+
+  (lang==="kz"?"Барлығы":"Все")+' ('+cntAll+')</button>'+
+  '<button id="hwrf-correct" onclick="hwSwitchReview(&apos;correct&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)">'+
+  '✅ '+(lang==="kz"?"Дұрыс":"Верно")+' ('+cntCorrect+')</button>'+
+  '<button id="hwrf-wrong" onclick="hwSwitchReview(&apos;wrong&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)">'+
+  '❌ '+(lang==="kz"?"Қате":"Ошибки")+' ('+cntWrong+')</button>'+
+  '</div>'+
   '<div id="hw-review-list">'+buildHwReview("all")+'</div>'+
   '</div>';
 
@@ -2393,13 +2399,8 @@ function renderHwResult(score,qs){
     ["all","wrong","correct"].forEach(function(f){
       var btn=document.getElementById("hwrf-"+f);
       if(!btn)return;
-      if(f===filter){
-        btn.style.background="var(--card)";btn.style.color="var(--text)";
-        btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";
-      } else {
-        btn.style.background="transparent";btn.style.color="var(--text2)";
-        btn.style.boxShadow="none";
-      }
+      if(f===filter){btn.style.background="var(--card)";btn.style.color="var(--text)";btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";}
+      else{btn.style.background="transparent";btn.style.color="var(--text2)";btn.style.boxShadow="none";}
     });
     var list=document.getElementById("hw-review-list");
     if(list)list.innerHTML=buildHwReview(filter);
