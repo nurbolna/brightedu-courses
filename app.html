@@ -2234,7 +2234,7 @@ function renderHwQuiz(){
   qState.qs.forEach(function(q,i){
     var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
     var selAns=qState.ans[q.id],isFlagged=qState.flags&&qState.flags[q.id];
-    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="hwqblock-'+i+'">'+
+    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+ '" id="hwqblock-'+i+'">'+
     '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+'<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="hwToggleFlag(\''+q.id+'\','+i+')">\uD83D\uDEA9</button></div>'+
     (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
     '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
@@ -2277,15 +2277,6 @@ window.hwPickScroll=function(qId,j,qi){
 };
 window.hwScrollTo=function(i){var b=document.getElementById("hwqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
 window.hwToggleNav=function(){qState.navHidden=!qState.navHidden;renderHwQuiz();};
-window.hwToggleFlag=function(qId,qi){
-  if(!qState.flags)qState.flags={};
-  if(qState.flags[qId])delete qState.flags[qId];else qState.flags[qId]=true;
-  var block=document.getElementById('hwqblock-'+qi);
-  if(block){block.className='q-block'+(qState.flags[qId]?' flagged':'');var btn=block.querySelector('.q-flag-btn');if(btn)btn.className='q-flag-btn'+(qState.flags[qId]?' active':'');}
-  var ng=document.getElementById('hw-nav-grid');
-  if(ng){var dots=ng.querySelectorAll('div');if(dots[qi])dots[qi].style.background=qState.flags[qId]?'#F59E0B':(qState.ans[qId]!==undefined?'#22C55E':'var(--border)');}
-  var fe=document.getElementById('hw-stat-flag');if(fe)fe.textContent=Object.keys(qState.flags||{}).length;
-};
 window.hwExitBtn=function(){if(confirm(lang==="kz"?"\u0422\u0435\u0441\u0442\u0442\u0435\u043d \u0448\u044b\u0493\u0430\u0441\u044b\u0437 \u0431\u0430?":"\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u0441\u0442\u0430?"))renderTopicPageNew();};
 window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
 window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));};
@@ -2390,7 +2381,8 @@ function renderHwResult(score,qs){
   };
   window.hwToggleExpl=function(id){
     var panel=document.getElementById(id);
-    var arrow=document.getElementById("expl-arrow-"+id.replace("expl-",""));
+    var qi=id.replace("expl-","");
+    var arrow=document.getElementById("expl-arrow-"+qi);
     if(!panel)return;
     var isOpen=panel.style.display!=="none";
     panel.style.display=isOpen?"none":"block";
