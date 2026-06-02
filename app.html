@@ -2145,7 +2145,6 @@ async function loadTopicSections(){
   ctx.hwAttempts = hwAttempts;
 
   var hwDone = hwAttempts.length > 0;
-  var hwAttemptsLeft = Math.max(0, 2 - hwAttempts.length);
 
   // ── HOMEWORK CARD ──
   if(hwQs.length > 0){
@@ -2170,11 +2169,8 @@ async function loadTopicSections(){
     '<span style="font-size:11px;background:rgba(37,99,235,.1);color:var(--blue);padding:3px 10px;border-radius:20px;font-weight:700">'+hwQs.length+' '+(lang==="kz"?"сұрақ":"вопросов")+'</span>'+
     '</div>'+
     hwStatusHtml+
-    (hwAttemptsLeft>0?
     '<button onclick="startHwQuiz()" style="width:100%;padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.3)">'+
-    '📝 '+(hwDone?t("retakeHw"):t("startHw"))+' ('+(lang==="kz"?"қалды":"осталось")+': '+hwAttemptsLeft+')'+'</button>':
-    '<div style="text-align:center;padding:10px;font-size:13px;color:var(--text2);background:var(--bg2);border-radius:9px">'+
-    (lang==="kz"?"Максимум 2 рет тапсырылды":"Использованы все 2 попытки")+'</div>')+
+    '📝 '+(hwDone?t("retakeHw"):t("startHw"))+'</button>'+
     '</div>';
   }
 
@@ -2214,7 +2210,7 @@ window.startHwQuiz=function(){
   var qs=ctx.hwQs||[];
   if(!qs.length){toast(lang==="kz"?"Үй жұмысы сұрақтары жоқ":"Нет вопросов д/з","#F59E0B");return;}
   qState.mode="hw";qState.subject=ctx.subject;qState.topicId=ctx.topicId;
-  qState.qs=qs;qState.ans={};qState.flags={};qState.cur=0;qState.submitted=false;qState.time=0;
+  qState.qs=qs;qState.ans={};qState.cur=0;qState.submitted=false;qState.time=0;
   clearInterval(qState.timer);
   renderHwQuiz();showPage("topic");
 };
@@ -2226,16 +2222,27 @@ function renderHwQuiz(){
   var el=document.getElementById("pg-topic");
   var navHidden=qState.navHidden||false;
   var navDots="";
+  if(!qState.flags)qState.flags={};
+  var flagged=qState.flags;
+  var flagCount=Object.keys(flagged).filter(function(k){return flagged[k];}).length;
   qState.qs.forEach(function(q2,i){
-    var isAns=qState.ans[q2.id]!==undefined,isFlag=qState.flags&&qState.flags[q2.id];
-    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+(isFlag?"#F59E0B":isAns?"#22C55E":"var(--border)")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isFlag||isAns?"#fff":"var(--text2)")+';transition:all .15s">'+(isFlag?"🚩":(i+1))+'</div>';
+    var isAns=qState.ans[q2.id]!==undefined;
+    var isFlagged=flagged[q2.id];
+    var bg=isFlagged?"rgba(245,158,11,.2)":(isAns?"#22C55E":"var(--border)");
+    var col=isFlagged?"#D97706":(isAns?"#fff":"var(--text2)");
+    var brd=isFlagged?"1.5px solid rgba(245,158,11,.6)":"none";
+    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+bg+';border:'+brd+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+col+';transition:all .15s;position:relative">'+
+      (isFlagged?'<span style="position:absolute;top:-3px;right:-3px;font-size:8px">\uD83D\uDEA9</span>':'')+
+      (i+1)+'</div>';
   });
   var questionsHtml="";
   qState.qs.forEach(function(q,i){
     var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-    var selAns=qState.ans[q.id],isFlagged=qState.flags&&qState.flags[q.id];
-    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+ '" id="hwqblock-'+i+'">'+
-    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+'<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="hwToggleFlag(\''+q.id+'\','+i+')">\uD83D\uDEA9</button></div>'+
+    var selAns=qState.ans[q.id];
+    var isFlagged=flagged[q.id];
+    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="hwqblock-'+i+'">'+
+    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+
+    '<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="hwToggleFlag(\''+q.id+'\')">\uD83D\uDEA9</button></div>'+
     (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
     '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
     opts.forEach(function(opt,j){
@@ -2257,10 +2264,11 @@ function renderHwQuiz(){
   '<div class="mock-nav-title" style="margin-bottom:0">\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f</div>'+
   '<button onclick="hwToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button></div>'+
   '<div style="'+(navHidden?"display:none":"")+'">'+
-  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b id="hw-stat-flag">'+(Object.keys(qState.flags||{}).length)+'</b></span><span>\u2B55 <b id="hw-stat-skip">'+(qState.qs.length-answered)+'</b></span></div>'+
+  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b id="hw-stat-flag">'+flagCount+'</b></span></div>'+
   '<div class="mock-nav-grid" id="hw-nav-grid">'+navDots+'</div>'+
   '<div class="mock-nav-legend">'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
+  '<span><i style="width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0433\u0435\u043d":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d\u043e")+'</span>'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:var(--border);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u043e\u0441":"\u041f\u0443\u0441\u0442\u043e\u0439")+'</span>'+
   '</div></div></div></div></div>'+
   '<div class="wm">'+(user?user.name+" \u00b7 ":'')+'Bright Education</div>';
@@ -2276,6 +2284,7 @@ window.hwPickScroll=function(qId,j,qi){
   var se=document.getElementById("hw-stat-skip");if(se)se.textContent=(qState.qs.length-Object.keys(qState.ans).length);
 };
 window.hwScrollTo=function(i){var b=document.getElementById("hwqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
+window.hwToggleFlag=function(qId){if(!qState.flags)qState.flags={};qState.flags[qId]=!qState.flags[qId];renderHwQuiz();};
 window.hwToggleNav=function(){qState.navHidden=!qState.navHidden;renderHwQuiz();};
 window.hwExitBtn=function(){if(confirm(lang==="kz"?"\u0422\u0435\u0441\u0442\u0442\u0435\u043d \u0448\u044b\u0493\u0430\u0441\u044b\u0437 \u0431\u0430?":"\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u0441\u0442\u0430?"))renderTopicPageNew();};
 window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
@@ -2338,11 +2347,12 @@ function renderHwResult(score,qs){
         '<span style="font-size:13px">'+ico+opt+'</span></div>';
       }).join("")+'</div>'+
       (q.explanation||q.explanation_image_url?
-      '<div>'+
-      '<button onclick="hwToggleExpl(\'expl-'+qi+'\')" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.06);color:var(--blue);font-family:Inter,sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-top:8px">'+
-      '<span>💡</span><span>'+(lang==="kz"?"Түсіндірме":"Объяснение")+'</span><span id="expl-arrow-'+qi+'" style="margin-left:auto;transition:transform .2s">▼</span>'+
-      '</button>'+
-      '<div id="expl-'+qi+'" style="display:none;margin-top:6px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:12px">'+
+      '<div style="border:1px solid rgba(37,99,235,.2);border-radius:10px;overflow:hidden;margin-top:4px">'+
+      '<button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\';this.querySelector(\'.expl-arrow\').style.transform=this.nextElementSibling.style.display===\'block\'?\'rotate(180deg)\':\'rotate(0deg)\'" '+
+      'style="width:100%;padding:10px 14px;background:rgba(37,99,235,.06);border:none;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<span style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</span>'+
+      '<span class="expl-arrow" style="font-size:12px;color:var(--blue);transition:transform .2s">▼</span></button>'+
+      '<div style="display:none;padding:12px;background:rgba(37,99,235,.03)">'+
       (q.explanation?'<div style="font-size:13px;line-height:1.6;color:var(--text)">'+q.explanation+'</div>':'')+
       (q.explanation_image_url?'<img src="'+q.explanation_image_url+'" style="max-width:100%;border-radius:8px;margin-top:10px;display:block"/>':'')+
       '</div></div>':'')+
@@ -2362,31 +2372,37 @@ function renderHwResult(score,qs){
   '<button onclick="renderTopicPageNew()" style="margin-top:16px;padding:11px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
   (lang==="kz"?"Тестке өту →":"К тесту →")+'</button>'+
   '</div>'+
-  // Filter buttons
-  '<div style="display:flex;gap:8px;margin-bottom:14px">'+
-  '<button id="hwrf-all" onclick="hwSwitchReview(\'all\')" class="rf-btn on">'+(lang==="kz"?"Барлығы":"Все")+' ('+qs.length+')</button>'+
-  '<button id="hwrf-wrong" onclick="hwSwitchReview(\'wrong\')" class="rf-btn" style="border-color:rgba(239,68,68,.3);color:#EF4444">❌ '+t("wrongQ")+'</button>'+
-  '<button id="hwrf-correct" onclick="hwSwitchReview(\'correct\')" class="rf-btn" style="border-color:rgba(22,163,74,.3);color:#16A34A">✅ '+t("correctQ")+'</button>'+
-  '</div>'+
+  // Filter buttons - improved design with counts
+  (function(){
+    var cntAll=qs.length;
+    var cntCorrect=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
+    var cntWrong=qs.filter(function(q){var ua=qState.ans[q.id];return ua!==undefined&&ua!==q.correct_index;}).length;
+    return '<div style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px">'+
+    '<button id="hwrf-all" onclick="hwSwitchReview(\'all\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)">'+
+    (lang==="kz"?"Барлығы":"Все")+' <span style="font-size:11px;opacity:.7">('+cntAll+')</span></button>'+
+    '<button id="hwrf-correct" onclick="hwSwitchReview(\'correct\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:transparent;color:var(--text2)">'+
+    '✅ '+(lang==="kz"?"Дұрыс":"Верно")+' <span style="font-size:11px;opacity:.7">('+cntCorrect+')</span></button>'+
+    '<button id="hwrf-wrong" onclick="hwSwitchReview(\'wrong\')" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;transition:all .2s;background:transparent;color:var(--text2)">'+
+    '❌ '+(lang==="kz"?"Қате":"Ошибки")+' <span style="font-size:11px;opacity:.7">('+cntWrong+')</span></button>'+
+    '</div>';
+  })()+
   '<div id="hw-review-list">'+buildHwReview("all")+'</div>'+
   '</div>';
 
   window.hwSwitchReview=function(filter){
     ["all","wrong","correct"].forEach(function(f){
       var btn=document.getElementById("hwrf-"+f);
-      if(btn)btn.className="rf-btn"+(f===filter?" on":"");
+      if(!btn)return;
+      if(f===filter){
+        btn.style.background="var(--card)";btn.style.color="var(--text)";
+        btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";
+      } else {
+        btn.style.background="transparent";btn.style.color="var(--text2)";
+        btn.style.boxShadow="none";
+      }
     });
     var list=document.getElementById("hw-review-list");
     if(list)list.innerHTML=buildHwReview(filter);
-  };
-  window.hwToggleExpl=function(id){
-    var panel=document.getElementById(id);
-    var qi=id.replace("expl-","");
-    var arrow=document.getElementById("expl-arrow-"+qi);
-    if(!panel)return;
-    var isOpen=panel.style.display!=="none";
-    panel.style.display=isOpen?"none":"block";
-    if(arrow)arrow.style.transform=isOpen?"rotate(0deg)":"rotate(180deg)";
   };
 }
 
@@ -4054,7 +4070,6 @@ async function loadTopicSections(){
   ctx.hwAttempts = hwAttempts;
 
   var hwDone = hwAttempts.length > 0;
-  var hwAttemptsLeft = Math.max(0, 2 - hwAttempts.length);
 
   // ── HOMEWORK CARD ──
   if(hwQs.length > 0){
@@ -4079,11 +4094,8 @@ async function loadTopicSections(){
     '<span style="font-size:11px;background:rgba(37,99,235,.1);color:var(--blue);padding:3px 10px;border-radius:20px;font-weight:700">'+hwQs.length+' '+(lang==="kz"?"сұрақ":"вопросов")+'</span>'+
     '</div>'+
     hwStatusHtml+
-    (hwAttemptsLeft>0?
     '<button onclick="startHwQuiz()" style="width:100%;padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,#2563EB,#1D4ED8);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.3)">'+
-    '📝 '+(hwDone?t("retakeHw"):t("startHw"))+' ('+(lang==="kz"?"қалды":"осталось")+': '+hwAttemptsLeft+')'+'</button>':
-    '<div style="text-align:center;padding:10px;font-size:13px;color:var(--text2);background:var(--bg2);border-radius:9px">'+
-    (lang==="kz"?"Максимум 2 рет тапсырылды":"Использованы все 2 попытки")+'</div>')+
+    '📝 '+(hwDone?t("retakeHw"):t("startHw"))+'</button>'+
     '</div>';
   }
 
@@ -4135,16 +4147,27 @@ function renderHwQuiz(){
   var el=document.getElementById("pg-topic");
   var navHidden=qState.navHidden||false;
   var navDots="";
+  if(!qState.flags)qState.flags={};
+  var flagged=qState.flags;
+  var flagCount=Object.keys(flagged).filter(function(k){return flagged[k];}).length;
   qState.qs.forEach(function(q2,i){
     var isAns=qState.ans[q2.id]!==undefined;
-    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+(isAns?"#22C55E":"var(--border)")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isAns?"#fff":"var(--text2)")+';transition:all .15s">'+(i+1)+'</div>';
+    var isFlagged=flagged[q2.id];
+    var bg=isFlagged?"rgba(245,158,11,.2)":(isAns?"#22C55E":"var(--border)");
+    var col=isFlagged?"#D97706":(isAns?"#fff":"var(--text2)");
+    var brd=isFlagged?"1.5px solid rgba(245,158,11,.6)":"none";
+    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+bg+';border:'+brd+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+col+';transition:all .15s;position:relative">'+
+      (isFlagged?'<span style="position:absolute;top:-3px;right:-3px;font-size:8px">\uD83D\uDEA9</span>':'')+
+      (i+1)+'</div>';
   });
   var questionsHtml="";
   qState.qs.forEach(function(q,i){
     var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
     var selAns=qState.ans[q.id];
-    questionsHtml+='<div class="q-block" id="hwqblock-'+i+'">'+
-    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div></div>'+
+    var isFlagged=flagged[q.id];
+    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="hwqblock-'+i+'">'+
+    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+
+    '<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="hwToggleFlag(\''+q.id+'\')">\uD83D\uDEA9</button></div>'+
     (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
     '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
     opts.forEach(function(opt,j){
@@ -4166,10 +4189,11 @@ function renderHwQuiz(){
   '<div class="mock-nav-title" style="margin-bottom:0">\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f</div>'+
   '<button onclick="hwToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button></div>'+
   '<div style="'+(navHidden?"display:none":"")+'">'+
-  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\u2B55 <b id="hw-stat-skip">'+(qState.qs.length-answered)+'</b></span></div>'+
+  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b id="hw-stat-flag">'+flagCount+'</b></span></div>'+
   '<div class="mock-nav-grid" id="hw-nav-grid">'+navDots+'</div>'+
   '<div class="mock-nav-legend">'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
+  '<span><i style="width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u0435\u043b\u0433\u0456\u043b\u0435\u043d\u0433\u0435\u043d":"\u041e\u0442\u043c\u0435\u0447\u0435\u043d\u043e")+'</span>'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:var(--border);display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0411\u043e\u0441":"\u041f\u0443\u0441\u0442\u043e\u0439")+'</span>'+
   '</div></div></div></div></div>'+
   '<div class="wm">'+(user?user.name+" \u00b7 ":'')+'Bright Education</div>';
@@ -4185,6 +4209,7 @@ window.hwPickScroll=function(qId,j,qi){
   var se=document.getElementById("hw-stat-skip");if(se)se.textContent=(qState.qs.length-Object.keys(qState.ans).length);
 };
 window.hwScrollTo=function(i){var b=document.getElementById("hwqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
+window.hwToggleFlag=function(qId){if(!qState.flags)qState.flags={};qState.flags[qId]=!qState.flags[qId];renderHwQuiz();};
 window.hwToggleNav=function(){qState.navHidden=!qState.navHidden;renderHwQuiz();};
 window.hwExitBtn=function(){if(confirm(lang==="kz"?"\u0422\u0435\u0441\u0442\u0442\u0435\u043d \u0448\u044b\u0493\u0430\u0441\u044b\u0437 \u0431\u0430?":"\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u0441\u0442\u0430?"))renderTopicPageNew();};
 window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
