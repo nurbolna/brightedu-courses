@@ -2214,7 +2214,7 @@ window.startHwQuiz=function(){
   var qs=ctx.hwQs||[];
   if(!qs.length){toast(lang==="kz"?"Үй жұмысы сұрақтары жоқ":"Нет вопросов д/з","#F59E0B");return;}
   qState.mode="hw";qState.subject=ctx.subject;qState.topicId=ctx.topicId;
-  qState.qs=qs;qState.ans={};qState.cur=0;qState.submitted=false;qState.time=0;
+  qState.qs=qs;qState.ans={};qState.flags={};qState.cur=0;qState.submitted=false;qState.time=0;
   clearInterval(qState.timer);
   renderHwQuiz();showPage("topic");
 };
@@ -2227,15 +2227,15 @@ function renderHwQuiz(){
   var navHidden=qState.navHidden||false;
   var navDots="";
   qState.qs.forEach(function(q2,i){
-    var isAns=qState.ans[q2.id]!==undefined;
-    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+(isAns?"#22C55E":"var(--border)")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isAns?"#fff":"var(--text2)")+';transition:all .15s">'+(i+1)+'</div>';
+    var isAns=qState.ans[q2.id]!==undefined,isFlag=qState.flags&&qState.flags[q2.id];
+    navDots+='<div onclick="hwScrollTo('+i+')" style="cursor:pointer;width:34px;height:34px;border-radius:8px;background:'+(isFlag?"#F59E0B":isAns?"#22C55E":"var(--border)")+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:'+(isFlag||isAns?"#fff":"var(--text2)")+';transition:all .15s">'+(isFlag?"🚩":(i+1))+'</div>';
   });
   var questionsHtml="";
   qState.qs.forEach(function(q,i){
     var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-    var selAns=qState.ans[q.id];
-    questionsHtml+='<div class="q-block" id="hwqblock-'+i+'">'+
-    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div></div>'+
+    var selAns=qState.ans[q.id],isFlagged=qState.flags&&qState.flags[q.id];
+    questionsHtml+='<div class="q-block'+(isFlagged?" flagged":"")+'" id="hwqblock-'+i+'">'+
+    '<div class="q-block-hdr"><div class="q-num-badge"><span class="q-num">'+(lang==="kz"?"\u0421\u04b1\u0440\u0430\u049b":"\u0412\u043e\u043f\u0440\u043e\u0441")+' '+(i+1)+'</span></div>'+'<button class="q-flag-btn'+(isFlagged?" active":"")+'" onclick="hwToggleFlag(\''+q.id+'\','+i+')">\uD83D\uDEA9</button></div>'+
     (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:10px;margin-bottom:12px;display:block"/>':'')+
     '<div class="q-text">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div><div class="opts">';
     opts.forEach(function(opt,j){
@@ -2257,7 +2257,7 @@ function renderHwQuiz(){
   '<div class="mock-nav-title" style="margin-bottom:0">\u041d\u0410\u0412\u0418\u0413\u0410\u0426\u0418\u042f</div>'+
   '<button onclick="hwToggleNav()" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:Inter,sans-serif;font-size:11px;font-weight:600;cursor:pointer">'+(navHidden?(lang==="kz"?"\u041a\u04e9\u0440\u0441\u0435\u0442\u0443":"\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c"):(lang==="kz"?"\u0416\u0430\u0441\u044b\u0440\u0443":"\u0421\u043a\u0440\u044b\u0442\u044c"))+'</button></div>'+
   '<div style="'+(navHidden?"display:none":"")+'">'+
-  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\u2B55 <b id="hw-stat-skip">'+(qState.qs.length-answered)+'</b></span></div>'+
+  '<div class="mock-stats-row"><span>\u2705 <b id="hw-stat-ans">'+answered+'/'+qState.qs.length+'</b></span><span>\uD83D\uDEA9 <b id="hw-stat-flag">'+(Object.keys(qState.flags||{}).length)+'</b></span><span>\u2B55 <b id="hw-stat-skip">'+(qState.qs.length-answered)+'</b></span></div>'+
   '<div class="mock-nav-grid" id="hw-nav-grid">'+navDots+'</div>'+
   '<div class="mock-nav-legend">'+
   '<span><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;display:inline-block;vertical-align:middle"></i> '+(lang==="kz"?"\u0416\u0430\u0443\u0430\u043f\u0442\u0430\u043b\u0493\u0430\u043d":"\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e")+'</span>'+
@@ -2277,6 +2277,15 @@ window.hwPickScroll=function(qId,j,qi){
 };
 window.hwScrollTo=function(i){var b=document.getElementById("hwqblock-"+i);if(b)b.scrollIntoView({behavior:"smooth",block:"center"});};
 window.hwToggleNav=function(){qState.navHidden=!qState.navHidden;renderHwQuiz();};
+window.hwToggleFlag=function(qId,qi){
+  if(!qState.flags)qState.flags={};
+  if(qState.flags[qId])delete qState.flags[qId];else qState.flags[qId]=true;
+  var block=document.getElementById('hwqblock-'+qi);
+  if(block){block.className='q-block'+(qState.flags[qId]?' flagged':'');var btn=block.querySelector('.q-flag-btn');if(btn)btn.className='q-flag-btn'+(qState.flags[qId]?' active':'');}
+  var ng=document.getElementById('hw-nav-grid');
+  if(ng){var dots=ng.querySelectorAll('div');if(dots[qi])dots[qi].style.background=qState.flags[qId]?'#F59E0B':(qState.ans[qId]!==undefined?'#22C55E':'var(--border)');}
+  var fe=document.getElementById('hw-stat-flag');if(fe)fe.textContent=Object.keys(qState.flags||{}).length;
+};
 window.hwExitBtn=function(){if(confirm(lang==="kz"?"\u0422\u0435\u0441\u0442\u0442\u0435\u043d \u0448\u044b\u0493\u0430\u0441\u044b\u0437 \u0431\u0430?":"\u0412\u044b\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u0441\u0442\u0430?"))renderTopicPageNew();};
 window.pickHwAns=function(qId,i){qState.ans[qId]=i;renderHwQuiz();};
 window.hwNav=function(d){qState.cur=Math.max(0,Math.min(qState.qs.length-1,qState.cur+d));};
@@ -2338,11 +2347,14 @@ function renderHwResult(score,qs){
         '<span style="font-size:13px">'+ico+opt+'</span></div>';
       }).join("")+'</div>'+
       (q.explanation||q.explanation_image_url?
-      '<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:12px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</div>'+
+      '<div>'+
+      '<button onclick="hwToggleExpl(\'expl-'+qi+'\')" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid rgba(37,99,235,.25);background:rgba(37,99,235,.06);color:var(--blue);font-family:Inter,sans-serif;font-size:12px;font-weight:700;cursor:pointer;width:100%;margin-top:8px">'+
+      '<span>💡</span><span>'+(lang==="kz"?"Түсіндірме":"Объяснение")+'</span><span id="expl-arrow-'+qi+'" style="margin-left:auto;transition:transform .2s">▼</span>'+
+      '</button>'+
+      '<div id="expl-'+qi+'" style="display:none;margin-top:6px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:12px">'+
       (q.explanation?'<div style="font-size:13px;line-height:1.6;color:var(--text)">'+q.explanation+'</div>':'')+
       (q.explanation_image_url?'<img src="'+q.explanation_image_url+'" style="max-width:100%;border-radius:8px;margin-top:10px;display:block"/>':'')+
-      '</div>':'')+
+      '</div></div>':'')+
       '</div>';
     }).join("");
   }
@@ -2375,6 +2387,14 @@ function renderHwResult(score,qs){
     });
     var list=document.getElementById("hw-review-list");
     if(list)list.innerHTML=buildHwReview(filter);
+  };
+  window.hwToggleExpl=function(id){
+    var panel=document.getElementById(id);
+    var arrow=document.getElementById("expl-arrow-"+id.replace("expl-",""));
+    if(!panel)return;
+    var isOpen=panel.style.display!=="none";
+    panel.style.display=isOpen?"none":"block";
+    if(arrow)arrow.style.transform=isOpen?"rotate(0deg)":"rotate(180deg)";
   };
 }
 
