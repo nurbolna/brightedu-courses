@@ -2384,24 +2384,22 @@ function renderHwResult(score,qs){
   '<button onclick="renderTopicPageNew()" style="margin-top:16px;padding:11px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
   (lang==="kz"?"Тестке өту →":"К тесту →")+'</button>'+
   '</div>'+
-  '<div style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px">'+
-  '<button id="hwrf-all" onclick="hwSwitchReview(&apos;all&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)">'+
+  '<div id="hw-filter-bar" style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px">'+
+  '<button id="hwrf-all" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)" onclick="hwSwitchReview(this,\'all\')">'+
   (lang==="kz"?"Барлығы":"Все")+' ('+cntAll+')</button>'+
-  '<button id="hwrf-correct" onclick="hwSwitchReview(&apos;correct&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)">'+
+  '<button id="hwrf-correct" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)" onclick="hwSwitchReview(this,\'correct\')">'+
   '✅ '+(lang==="kz"?"Дұрыс":"Верно")+' ('+cntCorrect+')</button>'+
-  '<button id="hwrf-wrong" onclick="hwSwitchReview(&apos;wrong&apos;)" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)">'+
+  '<button id="hwrf-wrong" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)" onclick="hwSwitchReview(this,\'wrong\')">'+
   '❌ '+(lang==="kz"?"Қате":"Ошибки")+' ('+cntWrong+')</button>'+
   '</div>'+
   '<div id="hw-review-list">'+buildHwReview("all")+'</div>'+
   '</div>';
 
-  window.hwSwitchReview=function(filter){
-    ["all","wrong","correct"].forEach(function(f){
-      var btn=document.getElementById("hwrf-"+f);
-      if(!btn)return;
-      if(f===filter){btn.style.background="var(--card)";btn.style.color="var(--text)";btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";}
-      else{btn.style.background="transparent";btn.style.color="var(--text2)";btn.style.boxShadow="none";}
+  window.hwSwitchReview=function(btn,filter){
+    document.querySelectorAll("#hw-filter-bar button").forEach(function(b){
+      b.style.background="transparent";b.style.color="var(--text2)";b.style.boxShadow="none";
     });
+    btn.style.background="var(--card)";btn.style.color="var(--text)";btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";
     var list=document.getElementById("hw-review-list");
     if(list)list.innerHTML=buildHwReview(filter);
   };
@@ -4235,56 +4233,100 @@ async function finalizeHwQuiz(){
 function renderHwResult(score,qs){
   var pct=Math.round(score/qs.length*100);
   var el=document.getElementById("pg-topic");
+
+  window.hwToggleExpl=function(btn){
+    var body=btn.nextElementSibling;
+    var arrow=btn.querySelector(".expl-arrow");
+    var isOpen=body.style.display==="block";
+    body.style.display=isOpen?"none":"block";
+    if(arrow)arrow.style.transform=isOpen?"rotate(0deg)":"rotate(180deg)";
+  };
+
+  function buildHwReview(filter){
+    var items=qs.filter(function(q){
+      var ua=qState.ans[q.id];
+      var ok=ua===q.correct_index;
+      var skip=ua===undefined;
+      if(filter==="correct")return ok;
+      if(filter==="wrong")return !ok&&!skip;
+      if(filter==="skip")return skip;
+      return true;
+    });
+    if(!items.length)return'<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">'+(lang==="kz"?"Нәтиже жоқ":"Нет результатов")+'</div>';
+    return items.map(function(q){
+      var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
+      var ua=qState.ans[q.id];
+      var ok=ua===q.correct_index;
+      var skip=ua===undefined;
+      var qNum=qs.indexOf(q)+1;
+      var qText=(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))||"";
+      return'<div class="card" style="margin-bottom:10px;border-left:4px solid '+(skip?"var(--border)":ok?"#16A34A":"#EF4444")+';padding:14px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+      '<span style="font-size:18px">'+(skip?"⭕":ok?"✅":"❌")+'</span>'+
+      '<span style="font-weight:700;font-size:14px">'+t("question")+' '+qNum+'</span>'+
+      '<span style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:20px;background:'+(ok?"rgba(22,163,74,.1)":"rgba(239,68,68,.1)")+';color:'+(ok?"#16A34A":"#EF4444")+';font-weight:700">'+
+      (skip?(lang==="kz"?"Жауапсыз":"Пропущен"):ok?(lang==="kz"?"Дұрыс":"Верно"):(lang==="kz"?"Қате":"Неверно"))+'</span></div>'+
+      (q.image_url?'<img src="'+q.image_url+'" style="max-width:100%;max-height:260px;border-radius:8px;margin-bottom:12px;display:block"/>':'')+
+      (qText?'<div style="font-size:14px;line-height:1.6;margin-bottom:12px;color:var(--text)">'+qText+'</div>':'')+
+      '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">'+
+      opts.map(function(opt,j){
+        var isUser=j===ua;
+        var isCorr=j===q.correct_index;
+        var bg=isUser&&ok?"rgba(22,163,74,.12)":isUser&&!ok?"rgba(239,68,68,.1)":isCorr&&!ok?"rgba(22,163,74,.06)":"var(--bg2)";
+        var border=isUser&&ok?"1.5px solid #16A34A":isUser&&!ok?"1.5px solid #EF4444":isCorr&&!ok?"1.5px solid rgba(22,163,74,.4)":"1px solid var(--border)";
+        var ico=isUser&&ok?"✅ ":isUser&&!ok?"❌ ":isCorr&&!ok?"✓ ":"";
+        return'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:'+bg+';border:'+border+'">'+
+        '<span style="width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+("ABCDE"[j])+'</span>'+
+        '<span style="font-size:13px">'+ico+opt+'</span></div>';
+      }).join("")+'</div>'+
+      (q.explanation||q.explanation_image_url?
+      '<div style="border:1px solid rgba(37,99,235,.2);border-radius:10px;overflow:hidden;margin-top:4px">'+
+      '<button onclick="hwToggleExpl(this)" style="width:100%;padding:10px 14px;background:rgba(37,99,235,.06);border:none;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:8px">'+
+      '<span style="font-size:12px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</span>'+
+      '<span class="expl-arrow" style="font-size:12px;color:var(--blue);transition:transform .2s">▼</span></button>'+
+      '<div style="display:none;padding:12px;background:rgba(37,99,235,.03)">'+
+      (q.explanation?'<div style="font-size:13px;line-height:1.6;color:var(--text)">'+q.explanation+'</div>':'')+
+      (q.explanation_image_url?'<img src="'+q.explanation_image_url+'" style="max-width:100%;border-radius:8px;margin-top:10px;display:block"/>':'')+
+      '</div></div>':'')+
+      '</div>';
+    }).join("");
+  }
+
+  var cntAll=qs.length;
+  var cntCorrect=qs.filter(function(q){return qState.ans[q.id]===q.correct_index;}).length;
+  var cntWrong=qs.filter(function(q){var ua=qState.ans[q.id];return ua!==undefined&&ua!==q.correct_index;}).length;
+
   el.innerHTML=
-  '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPageNew()">←</button>'+
-  '<div><div class="app-title">📊 '+t("hwResult")+'</div></div></div>'+
+  '<div class="app-hdr"><button class="back-btn" onclick="renderTopicPageNew()">\u2190</button>'+
+  '<div><div class="app-title">\uD83D\uDCCA '+t("hwResult")+'</div></div></div>'+
   '<div style="max-width:720px;margin:0 auto;padding:16px">'+
   '<div class="card" style="text-align:center;margin-bottom:16px">'+
-  '<div style="font-size:42px;margin-bottom:8px">'+(pct>=85?"🎉":"📚")+'</div>'+
+  '<div style="font-size:42px;margin-bottom:8px">'+(pct>=85?"\uD83C\uDF89":"\uD83D\uDCDA")+'</div>'+
   '<div style="font-family:Syne,sans-serif;font-size:40px;font-weight:800;color:'+(pct>=85?"#16A34A":pct>=50?"#F59E0B":"#EF4444")+'">'+pct+'%</div>'+
   '<div style="font-size:14px;color:var(--text2);margin-top:4px">'+score+'/'+qs.length+'</div>'+
   '<button onclick="renderTopicPageNew()" style="margin-top:16px;padding:11px 24px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer">'+
-  (lang==="kz"?"Тестке өту →":"К тесту →")+'</button>'+
+  (lang==="kz"?"\u0422\u0435\u0441\u0442\u043a\u0435 \u04e9\u0442\u0443 \u2192":"\u041a \u0442\u0435\u0441\u0442\u0443 \u2192")+'</button>'+
   '</div>'+
-  // All questions with results
-  '<div style="display:flex;flex-direction:column;gap:10px">'+
-  qs.map(function(q,qi){
-    var opts=typeof q.options==="string"?JSON.parse(q.options):q.options;
-    var userAns=qState.ans[q.id];
-    var isCorrect=userAns===q.correct_index;
-    var isSkipped=userAns===undefined;
-    return'<div class="card" style="border-left:4px solid '+(isSkipped?"var(--border)":isCorrect?"#16A34A":"#EF4444")+'">'+
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-    '<span style="font-size:18px">'+(isSkipped?"⭕":isCorrect?"✅":"❌")+'</span>'+
-    '<span style="font-weight:700;font-size:14px">'+t("question")+' '+(qi+1)+'</span>'+
-    '<span style="margin-left:auto;font-size:12px;padding:2px 8px;border-radius:20px;background:'+(isCorrect?"rgba(22,163,74,.1)":"rgba(239,68,68,.1)")+';color:'+(isCorrect?"#16A34A":"#EF4444")+';font-weight:700">'+
-    (isSkipped?(lang==="kz"?"Жауапсыз":"Пропущен"):isCorrect?(lang==="kz"?"Дұрыс":"Верно"):(lang==="kz"?"Қате":"Неверно"))+
-    '</span></div>'+
-    '<div style="font-size:14px;line-height:1.6;margin-bottom:10px;font-weight:500">'+(lang==="kz"?q.text_kz:(q.text_ru||q.text_kz))+'</div>'+
-    '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">'+
-    opts.map(function(opt,j){
-      var isUser=j===userAns;
-      var isCorr=j===q.correct_index;
-      var bg=isUser&&isCorrect?"rgba(22,163,74,.12)":isUser&&!isCorrect?"rgba(239,68,68,.1)":isCorr&&!isCorrect?"rgba(22,163,74,.06)":"var(--bg2)";
-      var border=isUser&&isCorrect?"1.5px solid #16A34A":isUser&&!isCorrect?"1.5px solid #EF4444":isCorr&&!isCorrect?"1.5px solid rgba(22,163,74,.4)":"1px solid var(--border)";
-      var ico=isUser&&isCorrect?"✅ ":isUser&&!isCorrect?"❌ ":isCorr&&!isCorrect?"✓ ":"";
-      return'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:'+bg+';border:'+border+'">'+
-      '<span style="width:26px;height:26px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+"ABCD"[j]+'</span>'+
-      '<span style="font-size:13px">'+ico+opt+'</span></div>';
-    }).join("")+
-    '</div>'+
-    (q.explanation||q.explanation_image_url?
-    '<div style="background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.15);border-radius:10px;padding:12px">'+
-    '<div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px">💡 '+t("explanation")+'</div>'+
-    (q.explanation?'<div style="font-size:13px;line-height:1.6;color:var(--text)">'+q.explanation+'</div>':'')+
-    (q.explanation_image_url?'<img src="'+q.explanation_image_url+'" style="max-width:100%;border-radius:8px;margin-top:10px;display:block"/>':'')+
-    '</div>':"")+
-    '</div>';
-  }).join("")+
-  '</div></div>';
-}
+  '<div style="background:var(--bg2);border-radius:14px;padding:4px;display:flex;gap:4px;margin-bottom:16px" id="hw-filter-bar">'+
+  '<button id="hwrf-all" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)" onclick="hwSwitchReview(this,\'all\')">'+
+  (lang==="kz"?"\u0411\u0430\u0440\u043b\u044b\u0493\u044b":"\u0412\u0441\u0435")+' ('+cntAll+')</button>'+
+  '<button id="hwrf-correct" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)" onclick="hwSwitchReview(this,\'correct\')">'+
+  '\u2705 '+(lang==="kz"?"\u0414\u04b1\u0440\u044b\u0441":"\u0412\u0435\u0440\u043d\u043e")+' ('+cntCorrect+')</button>'+
+  '<button id="hwrf-wrong" style="flex:1;padding:9px 8px;border-radius:10px;border:none;cursor:pointer;font-family:Inter,sans-serif;font-size:13px;font-weight:700;background:transparent;color:var(--text2)" onclick="hwSwitchReview(this,\'wrong\')">'+
+  '\u274C '+(lang==="kz"?"\u049a\u0430\u0442\u0435":"\u041e\u0448\u0438\u0431\u043a\u0438")+' ('+cntWrong+')</button>'+
+  '</div>'+
+  '<div id="hw-review-list">'+buildHwReview("all")+'</div>'+
+  '</div>';
 
-// New SS test start (with hw lock check)
+  window.hwSwitchReview=function(btn,filter){
+    document.querySelectorAll("#hw-filter-bar button").forEach(function(b){
+      b.style.background="transparent";b.style.color="var(--text2)";b.style.boxShadow="none";
+    });
+    btn.style.background="var(--card)";btn.style.color="var(--text)";btn.style.boxShadow="0 1px 4px rgba(0,0,0,.08)";
+    var list=document.getElementById("hw-review-list");
+    if(list)list.innerHTML=buildHwReview(filter);
+  };
+}
 window.startSSQuizNew=function(mode){
   qState.mode=mode;qState.subject=ctx.subject;qState.topicId=ctx.topicId;
   qState.qs=ctx.topicQs||[];qState.ans={};qState.cur=0;qState.submitted=false;
