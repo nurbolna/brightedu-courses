@@ -1275,13 +1275,50 @@ async function renderChallengeAccept(data){
   '<div style="font-size:13px;color:rgba(255,255,255,.8)">'+data.score+'/'+data.total+' · '+data.from_name+'</div>'+
   '</div>'+
   '<div style="text-align:center;margin-bottom:6px;font-size:14px;color:rgba(255,255,255,.9);font-weight:600">'+(lang==="kz"?"Осыдан асып түсе аласың ба?":"Сможешь побить этот результат?")+'</div>'+
+  '<div style="display:flex;gap:8px;flex-direction:column">'+
+  '<button onclick="acceptAndStart(\''+data.challenge_id+'\',\''+data.test_id+'\',\''+data.subject+'\')" style="width:100%;padding:12px;border-radius:10px;border:none;background:#16A34A;color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:14px;cursor:pointer">⚔️ '+(lang==="kz"?"Дуэльге кіру!":"Принять вызов!")+'</button>'+
   '<div style="display:flex;gap:8px">'+
-  '<button onclick="acceptAndStart(\''+data.challenge_id+'\',\''+data.test_id+'\',\''+data.subject+'\')" style="flex:1;padding:12px;border-radius:10px;border:none;background:#16A34A;color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:14px;cursor:pointer">⚔️ '+(lang==="kz"?"Дуэльге кіру!":"Принять вызов!")+'</button>'+
-  '<button onclick="renderDashboard()" style="padding:12px 16px;border-radius:10px;border:none;background:rgba(255,255,255,.15);color:#fff;font-family:Inter,sans-serif;font-weight:600;font-size:13px;cursor:pointer">'+(lang==="kz"?"Кейін":"Позже")+'</button>'+
-  '</div></div>'+
+  '<button onclick="declineChallengeFromPage(\''+data.challenge_id+'\',\''+data.notif_id+'\')" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(239,68,68,.2);color:#FCA5A5;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">✕ '+(lang==="kz"?"Бас тарту":"Отказать")+'</button>'+
+  '<button onclick="renderDashboard()" style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">⏰ '+(lang==="kz"?"Кейін":"Позже")+'</button>'+
+  '</div></div></div>'+
   '</div>';
   showPage("dashboard");
 }
+
+// Дуэльді бас тарту (dashboard карточкасынан)
+window.declineChallenge=async function(challengeId,btn){
+  try{await sb.from("challenges").update({status:"declined"}).eq("id",challengeId);}catch(e){}
+  // Bell-дегі сол notification-ды да өшіру
+  var matchNotif=notifData.find(function(n){return n.type==="challenge"&&n.data&&n.data.challenge_id===challengeId;});
+  if(matchNotif){
+    await db.dismissNotif(matchNotif.id);
+    notifData=notifData.filter(function(n){return n.id!==matchNotif.id;});
+  }
+  renderDashboard();
+};
+
+// Дуэльді кейінге қалдыру (dashboard карточкасынан) — тек карточка жабылады, bell-де қалады
+window.snoozeChallenge=function(challengeId,btn){
+  // Dashboard-та осы challenge-ті уақытша жасырамыз
+  if(!ctx.snoozedChallenges)ctx.snoozedChallenges={};
+  ctx.snoozedChallenges[challengeId]=true;
+  renderDashboard();
+};
+
+// Дуэльді бас тарту (renderChallengeAccept бетінен)
+window.declineChallengeFromPage=async function(challengeId,notifId){
+  try{await sb.from("challenges").update({status:"declined"}).eq("id",challengeId);}catch(e){}
+  if(notifId){
+    await db.dismissNotif(notifId);
+    notifData=notifData.filter(function(n){return n.id!==notifId;});
+    var badge=document.getElementById("notif-badge-el");
+    if(badge){
+      if(notifData.length){badge.textContent=notifData.length;badge.style.display="flex";}
+      else{badge.style.display="none";}
+    }
+  }
+  renderDashboard();
+};
 
 window.dismissChallengeResult=async function(notifId,el){
   await db.dismissNotif(notifId);
@@ -1561,7 +1598,10 @@ async function renderDashboard(){
   var allPending=challenges.received.filter(function(c){return c.status==="pending";});
   // Ең ескі бойынша сортылаған (created_at ascending)
   var sortedPending=allPending.slice().sort(function(a,b){return new Date(a.created_at)-new Date(b.created_at);});
-  var pendingChallenges=sortedPending.length?[sortedPending[0]]:[];
+  // Snooze жасалғандарды алып тастау
+  var snoozed=ctx.snoozedChallenges||{};
+  var filteredPending=sortedPending.filter(function(c){return !snoozed[c.id];});
+  var pendingChallenges=filteredPending.length?[filteredPending[0]]:[];
 
   // Last 5 mock results for chart
   var last5=mock.slice(0,5).reverse();
@@ -1617,11 +1657,18 @@ async function renderDashboard(){
     '<div style="font-family:Syne,sans-serif;font-size:36px;font-weight:800;color:rgba(255,255,255,.4)">?</div>'+
     '<div style="font-size:11px;color:rgba(255,255,255,.5)">'+(lang==="kz"?"тапсырмадың":"не сдал")+'</div>'+
     '</div></div>'+
-    '<div style="display:flex;gap:8px">'+
+    '<div style="display:flex;gap:8px;flex-direction:column">'+
     '<button onclick="acceptAndStart(\''+ch.id+'\',\''+ch.test_id+'\',\''+ch.subject+'\')" '+
-    'style="flex:1;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(22,163,74,.4)">'+
+    'style="width:100%;padding:13px;border-radius:11px;border:none;background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;font-family:Inter,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(22,163,74,.4)">'+
     '⚔️ '+(lang==="kz"?"Дуэльді қабылдау!":"Принять вызов!")+'</button>'+
-    '</div></div>';
+    '<div style="display:flex;gap:8px">'+
+    '<button onclick="declineChallenge(\''+ch.id+'\',this)" '+
+    'style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(239,68,68,.2);color:#FCA5A5;font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">'+
+    '✕ '+(lang==="kz"?"Бас тарту":"Отказать")+'</button>'+
+    '<button onclick="snoozeChallenge(\''+ch.id+'\',this)" '+
+    'style="flex:1;padding:10px;border-radius:10px;border:none;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-family:Inter,sans-serif;font-weight:700;font-size:13px;cursor:pointer">'+
+    '⏰ '+(lang==="kz"?"Кейін":"Позже")+'</button>'+
+    '</div></div></div>';
   }).join(""):"")+
 
   // NUET Countdown
