@@ -1237,21 +1237,12 @@ window.toggleNotifDropdown=function(){
   },100);
 };
 
-window.openChallengeNotif=async function(notifId,dataStr){
+window.openChallengeNotif=function(notifId,dataStr){
   var d;
   try{d=JSON.parse(dataStr.replace(/&quot;/g,'"').replace(/&#39;/g,"'"));}catch(e){return;}
-  // Notification-ды оқылды деп белгілеу
-  await db.markNotifRead(notifId);
-  notifData=notifData.filter(function(n){return n.id!==notifId;});
-  var badge=document.getElementById("notif-badge-el");
-  if(badge){
-    if(notifData.length){badge.textContent=notifData.length;badge.style.display="flex";}
-    else{badge.style.display="none";}
-  }
+  // Notification-ды ӘЗІ өшірмейміз — тек Қабылдау/Бас тарту кезінде өшеді
+  d.notif_id=notifId;
   var dd=document.getElementById("notif-dropdown");if(dd)dd.remove();
-  // Осы challenge-тің activeChallenge-ін сақтаймыз (dashboard карточкасы орнына)
-  ctx.activeChallenge={id:d.challenge_id};
-  // Challenge бетін ашамыз
   renderChallengeAccept(d);
 };
 
