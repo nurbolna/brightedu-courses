@@ -2967,7 +2967,7 @@ function renderMockResult(){
   // Build review list
   var reviewFilter="all";
 
-  function buildReview(filter){
+  window._buildReview=function(filter){
     var items=r.qs.filter(function(q){
       var userAns=r.ans[q.id];
       var isCorrect=userAns===q.correct_index;
@@ -3072,7 +3072,7 @@ function renderMockResult(){
   '<button class="rf-btn" id="rf-wrong" onclick="switchReview(\'wrong\')" style="border-color:rgba(239,68,68,.3);color:#EF4444">❌ '+t("wrongQ")+'</button>'+
   '<button class="rf-btn" id="rf-correct" onclick="switchReview(\'correct\')" style="border-color:rgba(22,163,74,.3);color:#16A34A">✅ '+t("correctQ")+'</button>'+
   '</div></div>'+
-  '<div id="review-list">'+buildReview("all")+'</div>'+
+  '<div id="review-list">'+(window._buildReview?window._buildReview("all")+"":buildReview("all"))+'</div>'+
   '</div>'+
 
   '</div>';
@@ -3117,7 +3117,7 @@ window.switchReview=function(filter){
     if(btn)btn.className="rf-btn"+(f===filter?" on":"");
   });
   var list=document.getElementById("review-list");
-  if(list)list.innerHTML=buildReview(filter);
+  if(list&&window._buildReview)list.innerHTML=window._buildReview(filter);
 };
 
 window.openVideoModal=function(src,qNum){
