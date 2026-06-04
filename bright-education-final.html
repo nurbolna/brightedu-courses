@@ -6,6 +6,7 @@
 <title>BRIGHT Education — Платформа</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
 :root{--bg:#F8FAFF;--bg2:#EEF2FF;--text:#0F172A;--text2:#64748B;--border:#E2E8F0;--blue:#2563EB;--blue2:#1D4ED8;--bl:#EFF6FF;--green:#16A34A;--red:#EF4444;--card:#fff;--sh:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(37,99,235,.06)}
 .dark{--bg:#0A1628;--bg2:#111D35;--text:#F0F6FF;--text2:#8BA3C7;--border:rgba(255,255,255,.08);--blue:#3B82F6;--blue2:#2563EB;--bl:rgba(59,130,246,.1);--green:#22C55E;--red:#F87171;--card:rgba(255,255,255,.05);--sh:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.2)}
@@ -4294,10 +4295,18 @@ function goPayStep2() { showPayStep("method"); }
 function goPayKaspi() {
   var prod = PRODUCTS[payCtx.product];
   // QR image
-  var qrImg = document.getElementById("kaspi-qr-image");
-  if (qrImg) {
-    var qrData = encodeURIComponent(KASPI_QR_URL);
-    qrImg.src = "https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=" + qrData + "&choe=UTF-8";
+  // QRCode.js арқылы браузерде QR жасау
+  var qrContainer = document.getElementById("kaspi-qr-canvas");
+  if (qrContainer) {
+    qrContainer.innerHTML = "";
+    new QRCode(qrContainer, {
+      text: KASPI_QR_URL,
+      width: 180,
+      height: 180,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
   }
   // Amount
   var amtVal = document.getElementById("kaspi-amount-val");
@@ -5770,7 +5779,7 @@ async function renderRating(){
         <div class="kaspi-qr-box">
           <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px" id="kaspi-amount-label">Төлем сомасы: <span style="color:var(--blue)" id="kaspi-amount-val">3 990 ₸</span></div>
           <div class="kaspi-qr-img">
-            <img id="kaspi-qr-image" src="" alt="Kaspi QR" onerror="this.parentElement.innerHTML='<div style=\'font-size:48px\'>📱</div><div style=\'font-size:11px;color:#999;margin-top:6px\'>QR жүктелуде...</div>'" />
+            <div id="kaspi-qr-canvas" style="width:180px;height:180px;display:flex;align-items:center;justify-content:center"></div>
           </div>
           <div style="font-size:12px;color:var(--text2);margin-top:6px" id="kaspi-qr-hint">Kaspi → QR → Сканерлеу</div>
         </div>
