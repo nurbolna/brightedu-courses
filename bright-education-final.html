@@ -4165,7 +4165,7 @@ async function renderAdminUsers(){
 // ── PAYMENT & ACCESS SYSTEM ────────────────────────────────────
 // ══════════════════════════════════════════════════════════════
 
-var KASPI_QR_URL = "https://pay.kaspi.kz/pay/gozdx2ic"; // ← Kaspi QR сілтемеңіз
+var KASPI_QR_URL = "https://pay.kaspi.kz/pay/gozdx2ic";
 var MANAGER_PHONE = "77757513591";
 var payCtx = { product: "mock", step: 1 };
 
@@ -4518,7 +4518,7 @@ async function adminGrantAccess() {
   if (!phone) { msg.style.color = "var(--red)"; msg.textContent = isKz ? "Телефонды енгізіңіз" : "Введите телефон"; return; }
   msg.style.color = "var(--text2)"; msg.textContent = isKz ? "Іздеу..." : "Поиск...";
   try {
-    var r = await sb.from("users").select("id,name").eq("phone", phone).single();
+    var r = await sb.from("users").select("id,name").eq("phone", phone).maybeSingle();
     if (!r.data) { msg.style.color = "var(--red)"; msg.textContent = isKz ? "Оқушы табылмады" : "Пользователь не найден"; return; }
     var ok = await db.grantAccess(r.data.id, product, days);
     if (ok) {
