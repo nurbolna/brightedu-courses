@@ -2502,8 +2502,19 @@ async function renderCourseSelect(){
   var md=mathT.filter(function(tp){return pm["math_"+tp.id]&&pm["math_"+tp.id].passed;}).length;
   var cd=ctT.filter(function(tp){return pm["ct_"+tp.id]&&pm["ct_"+tp.id].passed;}).length;
 
+  // Қанша күн қалғанын алу
+  var ssEnrollments = await db.getMyEnrollments(user.id);
+  var ssEnroll = ssEnrollments.find(function(e){ return e.product === "ss"; });
+  var ssDaysLeftBadge = "";
+  if(ssEnroll){
+    var ssDaysLeft = Math.ceil((new Date(ssEnroll.expires_at) - Date.now()) / (1000*60*60*24));
+    var ssBadgeColor = ssDaysLeft <= 3 ? "#EF4444" : ssDaysLeft <= 7 ? "#F59E0B" : "#16A34A";
+    var ssDaysLabel = lang === "kz" ? (ssDaysLeft + " күн қалды") : (ssDaysLeft + " дн. осталось");
+    ssDaysLeftBadge = '<span style="display:inline-flex;align-items:center;gap:5px;background:'+ssBadgeColor+'1a;color:'+ssBadgeColor+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;margin-left:8px;vertical-align:middle">⏳ '+ssDaysLabel+'</span>';
+  }
+
   el.innerHTML='<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-  '<div><div class="app-title">📚 '+t("selfStudy")+'</div><div class="app-sub">'+t("chooseCourse")+'</div></div></div>'+
+  '<div><div class="app-title">📚 '+t("selfStudy")+ssDaysLeftBadge+'</div><div class="app-sub">'+t("chooseCourse")+'</div></div></div>'+
   '<div style="max-width:640px;margin:0 auto;padding:20px 16px">'+
   '<div class="course-grid">'+
   buildCCard("math","📐",t("math"),t("mathDesc"),mathT.length,md,mathT,pm,"linear-gradient(135deg,#1E40AF,#1D4ED8)")+
@@ -3347,10 +3358,20 @@ async function renderMockSelect(){
   }
 
   var activeTab="math";
+  // Қанша күн қалғанын алу
+  var enrollments = await db.getMyEnrollments(user.id);
+  var mockEnroll = enrollments.find(function(e){ return e.product === "mock"; });
+  var daysLeftBadge = "";
+  if(mockEnroll){
+    var daysLeft = Math.ceil((new Date(mockEnroll.expires_at) - Date.now()) / (1000*60*60*24));
+    var badgeColor = daysLeft <= 3 ? "#EF4444" : daysLeft <= 7 ? "#F59E0B" : "#16A34A";
+    var daysLabel = lang === "kz" ? (daysLeft + " күн қалды") : (daysLeft + " дн. осталось");
+    daysLeftBadge = '<span style="display:inline-flex;align-items:center;gap:5px;background:'+badgeColor+'1a;color:'+badgeColor+';font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;margin-left:8px;vertical-align:middle">⏳ '+daysLabel+'</span>';
+  }
   function renderTabs(){
     el.innerHTML=
     '<div class="app-hdr"><button class="back-btn" onclick="renderDashboard()">←</button>'+
-    '<div><div class="app-title">📝 '+t("mockTest")+'</div><div class="app-sub">'+t("chooseSubject")+'</div></div></div>'+
+    '<div><div class="app-title">📝 '+t("mockTest")+daysLeftBadge+'</div><div class="app-sub">'+t("chooseSubject")+'</div></div></div>'+
     '<div style="max-width:640px;margin:0 auto;padding:16px">'+
     '<div style="display:flex;gap:8px;margin-bottom:16px">'+
     '<button id="tab-math" onclick="switchTab(\'math\')" style="flex:1;padding:10px;border-radius:10px;border:none;font-family:Inter,sans-serif;font-weight:700;font-size:14px;cursor:pointer;background:'+(activeTab==="math"?"linear-gradient(135deg,#2563EB,#1D4ED8)":"var(--bg2)")+';color:'+(activeTab==="math"?"#fff":"var(--text)")+'">📐 '+t("math")+'</button>'+
