@@ -4220,21 +4220,40 @@ db.createEnrollment = async function(uid, product, price, days) {
 };
 db.getAllEnrollments = async function() {
   try {
-    var r = await sb.from("enrollments").select("*, users(name, phone)")
+    // users кестесімен join
+    var r = await sb.from("enrollments").select("id, user_id, product, price_kzt, expires_at, status, created_at, users(name, phone)")
       .order("created_at", { ascending: false }).limit(200);
+    if (r.error) throw r.error;
     return r.data || [];
-  } catch(e) { return []; }
+  } catch(e) {
+    // Fallback: join жоқ, тек enrollments
+    try {
+      var r2 = await sb.from("enrollments").select("id, user_id, product, price_kzt, expires_at, status, created_at")
+        .order("created_at", { ascending: false }).limit(200);
+      return r2.data || [];
+    } catch(e2) { return []; }
+  }
 };
 db.grantAccess = async function(userId, product, days) {
   try {
     var expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    await sb.from("enrollments").upsert({
-      user_id: userId, product: product, price_kzt: 0,
-      expires_at: expires, status: "active",
+    // Алдымен бар активті доступты өшіреміз
+    await sb.from("enrollments")
+      .update({ status: "revoked" })
+      .eq("user_id", userId)
+      .eq("product", product)
+      .eq("status", "active");
+    // Жаңа доступ жасаймыз
+    var r = await sb.from("enrollments").insert({
+      user_id: userId,
+      product: product,
+      price_kzt: 0,
+      expires_at: expires,
+      status: "active",
       created_at: new Date().toISOString()
-    }, { onConflict: "user_id,product" });
-    return true;
-  } catch(e) { return false; }
+    });
+    return !r.error;
+  } catch(e) { console.error("grantAccess error:", e); return false; }
 };
 db.revokeAccess = async function(enrollId) {
   try {
@@ -4505,7 +4524,8 @@ async function adminGrantAccess() {
     if (ok) {
       msg.style.color = "var(--green)";
       msg.textContent = (isKz ? "✅ Доступ берілді: " : "✅ Доступ выдан: ") + r.data.name;
-      setTimeout(function() { renderAdminEnrollments(); }, 1500);
+      document.getElementById("grant-phone").value = "";
+      renderAdminEnrollments();
     } else {
       msg.style.color = "var(--red)"; msg.textContent = isKz ? "Қате шықты" : "Ошибка";
     }
@@ -4579,6 +4599,10 @@ function updateSidebar(){
       if(adminDiv)adminDiv.style.display="block";
       if(adminSec)adminSec.style.display="block";
       if(adminItem)adminItem.style.display="flex";
+    } else {
+      if(adminDiv)adminDiv.style.display="none";
+      if(adminSec)adminSec.style.display="none";
+      if(adminItem)adminItem.style.display="none";
     }
   }
   // Active item
