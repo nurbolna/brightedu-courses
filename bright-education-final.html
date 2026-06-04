@@ -4295,7 +4295,10 @@ function goPayKaspi() {
   var prod = PRODUCTS[payCtx.product];
   // QR image
   var qrImg = document.getElementById("kaspi-qr-image");
-  if (qrImg) qrImg.src = KASPI_QR_URL;
+  if (qrImg) {
+    var qrData = encodeURIComponent(KASPI_QR_URL);
+    qrImg.src = "https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=" + qrData + "&choe=UTF-8";
+  }
   // Amount
   var amtVal = document.getElementById("kaspi-amount-val");
   if (amtVal) amtVal.textContent = prod.price_str;
